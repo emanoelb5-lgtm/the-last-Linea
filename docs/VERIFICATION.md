@@ -1,27 +1,24 @@
-# Verificação da versão 0.2 — Deixe um sinal
+# Verificação da versão 0.3 — O viajante
 
-Release: **v0.2.0-build.5** · versão Android **1005** · pacote `online.b5solucoes.thelastlinea.preview`.
-Código compilado: `c8d0d7d01fca720929e6cce4364393e8d95e1ed5`.
+## Falha anterior e correções
 
-## Resultados observados
+O APK público **v0.2.0-build.5 / 1005** foi instalado e aberto em Android 15, imagem Google APIs x86_64 com tradução ARM64. O processo fechou durante a abertura, com `SIGSEGV` na thread `AudioTrack`.
 
-- [GitHub Actions](https://github.com/emanoelb5-lgtm/the-last-Linea/actions/runs/42074160508): **success**. O workflow gerou, verificou e publicou o APK e o manifesto.
-- **47 verificações de integração do jogo**, sem falhas. Além do movimento, portas, montanha em oito direções, salvamento e final, cobrem corte com recompensa somente ao terminar, pausa da ação, cancelamento por dano, desarme com duração e proteção da câmera durante a suavização.
-- **3 testes de preparação de release**, sem falhas: propagação da versão informada, recompilação sem duplicar dados de assinatura e rejeição de metadados inválidos.
-- Leitura de progresso no formato anterior: vida, XP, marcas, memórias, armadilhas, montanha e posição continuam compatíveis. O esquema de salvamento continua na versão 1.
-- O verificador do APK no Actions confirmou assinatura v2, identificação como jogo, orientação horizontal, ARM64, versões do Android e presença da ponte nativa de instalação.
-- O arquivo publicado foi baixado separadamente e teve tamanho e SHA-256 comparados com `update.json`.
-- O atualizador real do jogo, executado no Godot desktop simulando o build anterior **1004**, encontrou a versão **1005**, baixou todo o APK e confirmou o SHA-256. O teste utilizou a rede do ambiente de desenvolvimento; nenhum proxy foi incorporado ao aplicativo.
-- Capturas reais da aproximação, corte e marca concluída foram renderizadas em **1280 × 720 (16:9)**. O gesto, a barra de progresso, o destaque e a recompensa são parte do jogo.
+- Primeira reprodução: [Actions 42081518721](https://github.com/emanoelb5-lgtm/the-last-Linea/actions/runs/42081518721). O backend gráfico antigo do emulador também apresentava erros de compilação de shaders.
+- Segunda reprodução usando ANGLE/SwiftShader: [Actions 42083219483](https://github.com/emanoelb5-lgtm/the-last-Linea/actions/runs/42083219483). Os erros de shader desapareceram, mas o fechamento no áudio permaneceu.
+- A resolução dos endereços com os símbolos oficiais correspondentes da engine apontou `AudioStreamPlaybackResampled::mix`, `audio_stream.cpp:222`, chamado por `AudioServer::_mix_step`, `_driver_process` e `AudioDriverOpenSL::_buffer_callback`: [diagnóstico de símbolos](https://github.com/emanoelb5-lgtm/the-last-Linea/actions/runs/42084696523).
 
-APK publicado: **73767219 bytes**.
+A versão 0.3 substitui os buffers WAV sintetizados durante a abertura por assets Ogg a 48 kHz, começa a ambientação após o primeiro quadro e garante tamanho válido para o SubViewport antes de adicioná-lo à cena. A vinheta também passou a usar limites de `smoothstep` em ordem definida. Isso não identifica, por si só, a causa exata em um telefone físico sem seu log.
 
-```text
-SHA-256: 8cc695ebf5ba429138afa7ba52f79bdd1bf5e2d1a56be1ff3bc0c5003dd8ed5b
-```
+## Verificações do código e do visual
 
-## Teste físico pendente
+- **52 verificações de integração**, sem falhas: exploração, portas, montanha em oito direções, armadilhas, corte, desarme, pausa, câmera, capítulo, salvamentos e atualizador; incluem dimensões iniciais válidas, rig humano, normais das malhas e importação do áudio.
+- **3 testes de preparação de release**, sem falhas.
+- Capturas reais renderizadas em OpenGL, **1280 × 720 (16:9)**: abertura, exploração, corte, marca, porta, configurações e personagem visto de frente. O corpo usa volumes afunilados, rosto oval, mãos, polegares, cotovelos e joelhos; o aspecto pixelado vem da renderização e dos materiais.
+- Mesmo esquema de salvamento (1), pacote `online.b5solucoes.thelastlinea.preview` e identidade de assinatura de teste das versões anteriores.
 
-Não houve acesso a um telefone Android físico. A instalação pelo sistema, a atualização de 1004 para 1005 sem desinstalar e o desempenho/temperatura no Galaxy A56 ainda precisam ser conferidos no aparelho. Os testes no Godot desktop e a verificação do APK não comprovam FPS no telefone.
+## Publicação Android
 
-A mesma identidade de assinatura de teste e o mesmo ID de pacote foram mantidos. Não desinstale a versão anterior se quiser preservar os dados locais ao atualizar.
+O workflow instala e executa o próprio APK ARM64 antes de publicar. Exige o primeiro quadro renderizado, toca no botão de novo jogo, espera a cutscene e a exploração, envia movimento por toque e volta do segundo plano sem recriar o processo. Logs e capturas são preservados nos artefatos. A versão não é publicada se essa etapa falhar.
+
+O desempenho e a instalação no Galaxy A56 físico continuam pendentes. Emulação com tradução ARM64 não mede FPS, temperatura nem o comportamento de todos os drivers reais.

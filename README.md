@@ -7,7 +7,7 @@ Criação: **Emanuel Bonfim / B5 Soluções**.
 
 [**Baixar o APK mais recente**](https://github.com/emanoelb5-lgtm/the-last-Linea/releases/latest/download/TheLastLinea.apk) · [Releases](https://github.com/emanoelb5-lgtm/the-last-Linea/releases) · [Compilações no Actions](https://github.com/emanoelb5-lgtm/the-last-Linea/actions/workflows/android.yml)
 
-![Captura real do capítulo I](docs/screenshots/04-porta.webp)
+![Personagem humano do capítulo I, renderizado no jogo](docs/screenshots/08-personagem-humano.webp)
 
 [Ver a abertura](docs/screenshots/02-abertura.webp) · [Ver a exploração](docs/screenshots/03-exploracao.webp) · [Ver a animação de corte](docs/screenshots/06-riscando.webp) · [Ver a marca concluída](docs/screenshots/07-marca.webp)
 
