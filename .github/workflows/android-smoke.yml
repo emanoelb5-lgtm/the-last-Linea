@@ -16,9 +16,8 @@ jobs:
         run: |
           set -euo pipefail
           curl --fail -L --retry 3 -o /tmp/symbols.zip https://github.com/godotengine/godot-builds/releases/download/4.6.3-stable/Godot_native_debug_symbols.4.6.3.stable.template_release.android.zip
-          unzip -Z1 /tmp/symbols.zip
           mkdir /tmp/symbols
-          unzip -q /tmp/symbols.zip '*arm64-v8a*' -d /tmp/symbols
-          linea_symbols="$(find /tmp/symbols -name '*.so' -print -quit)"
+          unzip -q /tmp/symbols.zip '*arm64-v8a/libgodot_android.so' -d /tmp/symbols
+          linea_symbols=/tmp/symbols/arm64-v8a/libgodot_android.so
           linea_resolver="$(find /usr/local/lib/android/sdk/ndk -name llvm-addr2line -print -quit)"
           "$linea_resolver" -C -f -i -e "$linea_symbols" 0x30b67d8 0x3095350 0x30931f0 0x118eec0
