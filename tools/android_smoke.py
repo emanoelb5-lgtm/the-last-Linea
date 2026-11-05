@@ -16,7 +16,7 @@ parser.add_argument('--exercise', action='store_true')
 args = parser.parse_args()
 args.output.mkdir(parents=True, exist_ok=True)
 package = 'online.b5solucoes.thelastlinea.preview'
-CRASH = r'SCRIPT ERROR:|FATAL EXCEPTION|Fatal signal|Unable to start activity|Unable to instantiate application|Program linking failed'
+CRASH = r'SCRIPT ERROR:|FATAL EXCEPTION|Fatal signal|Unable to start activity|Unable to instantiate application|Program linking failed|!_start_success'
 
 
 def adb(*arguments, check=True):
@@ -41,7 +41,7 @@ def dismiss_system_tutorial():
     except ET.ParseError:
         return
     for node in root.iter('node'):
-        if node.get('text') not in ('Got it', 'OK') or node.get('package') != 'com.android.systemui':
+        if node.get('text') not in ('Got it', 'OK') or node.get('package') not in ('android','com.android.systemui'):
             continue
         bounds = re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', node.get('bounds', ''))
         if bounds:
@@ -91,6 +91,11 @@ try:
     adb('shell', 'wm', 'size', '720x1280')
     adb('shell', 'settings', 'put', 'secure', 'immersive_mode_confirmations', 'confirmed')
     print(adb('install', '--no-streaming', '-r', str(args.apk)), flush=True)
+    # A fresh Google APIs image applies Pixel/navigation resource overlays after
+    # boot_completed and package installation. Let that finish before launching:
+    # changing Activity assets mid-initialization tears down the native engine.
+    print('Waiting for first-boot resource overlays to settle before launch', flush=True)
+    time.sleep(30)
     adb('shell', 'am', 'force-stop', package, check=False)
     adb('logcat', '-c')
     launch_args = ('shell', 'am', 'start', '-W', '-a', 'android.intent.action.MAIN',
