@@ -49,6 +49,7 @@ var intro_serial := 0
 var autosave_clock := 0.0
 var interaction: Dictionary = {}
 var booted := false
+var button_reports: Array[Dictionary] = []
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -487,8 +488,14 @@ func finish_intro() -> void:
 	print("LINEA_PLAY_READY")
 
 func report_button_after_layout(control: Control, id: String) -> void:
-	var target: WeakRef = weakref(control)
-	RenderingServer.frame_post_draw.connect(report_button.bind(target,id),CONNECT_ONE_SHOT)
+	button_reports.append({"target":weakref(control),"id":id})
+	if not RenderingServer.frame_post_draw.is_connected(flush_button_reports):
+		RenderingServer.frame_post_draw.connect(flush_button_reports,CONNECT_ONE_SHOT)
+
+func flush_button_reports() -> void:
+	for report in button_reports:
+		report_button(report.target,report.id)
+	button_reports.clear()
 
 func report_button(target: WeakRef, id: String) -> void:
 	var control: Control = target.get_ref()
