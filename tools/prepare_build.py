@@ -39,6 +39,7 @@ key.write_bytes(base64.b64decode((root/"tools/preview-signing.base64").read_text
 key.chmod(0o600)
 version = f"0.1.0-preview.{args.code}"
 presets = (root/"export_presets.cfg").read_text()
+presets = re.sub(r'^keystore/(?:release|release_user|release_password)=.*\n', '', presets, flags=re.MULTILINE)
 presets = re.sub(r"version/code=\d+",f"version/code={args.code}",presets)
 presets = re.sub(r'version/name="[^"]+"',f'version/name="{version}"',presets)
 signing = (f'keystore/release={json.dumps(str(key))}\n'

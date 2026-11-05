@@ -7,6 +7,10 @@ Criação: **Emanuel Bonfim / B5 Soluções**.
 
 [**Baixar o APK mais recente**](https://github.com/emanoelb5-lgtm/the-last-Linea/releases/latest/download/TheLastLinea.apk) · [Releases](https://github.com/emanoelb5-lgtm/the-last-Linea/releases) · [Compilações no Actions](https://github.com/emanoelb5-lgtm/the-last-Linea/actions/workflows/android.yml)
 
+![Captura real do capítulo I](docs/screenshots/04-porta.webp)
+
+[Ver a abertura](docs/screenshots/02-abertura.webp) · [Ver a exploração](docs/screenshots/03-exploracao.webp)
+
 ## Capítulo I — A floresta que devolve
 
 - Abertura com câmera animada: árvores secas, névoa e um homem desacordado que desperta.

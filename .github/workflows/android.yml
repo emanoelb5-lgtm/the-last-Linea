@@ -75,7 +75,7 @@ jobs:
           godot --headless --editor --import --quit 2>&1 | tee build/import.log
           godot --headless --path . --export-release Android build/TheLastLinea.apk 2>&1 | tee build/export.log
           python3 -c "from pathlib import Path; assert Path('build/TheLastLinea.apk').stat().st_size > 1000000"
-          "$ANDROID_HOME/build-tools/36.1.0/apksigner" verify --verbose build/TheLastLinea.apk
+          python3 tools/verify_apk.py --build-tools "$ANDROID_HOME/build-tools/36.1.0"
       - name: Create release manifest
         env:
           RELEASE_TAG: v0.1.0-build.${{ github.run_number }}
@@ -89,6 +89,7 @@ jobs:
             build/TheLastLinea.apk
             build/update.json
             build/SHA256SUMS.txt
+            build/APK-verification.txt
             build/*.log
           if-no-files-found: warn
       - name: Publish playable preview
