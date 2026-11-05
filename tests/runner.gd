@@ -36,6 +36,14 @@ func _ready() -> void:
 	verify(game.forest.get_world_3d().direct_space_state.intersect_ray(sight).is_empty(),"waking cutscene keeps the man visible between the trees")
 	game.finish_intro()
 	verify(State.intro_seen and game.mode == "play","intro skip enters gameplay and persists")
+	game.propagate_notification(NOTIFICATION_APPLICATION_PAUSED)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	verify(game.mode == "pause" and is_instance_valid(game.overlay) and game.overlay.is_inside_tree(),"Android pause builds a visible menu after the tree unlocks notification propagation")
+	game.propagate_notification(NOTIFICATION_WM_GO_BACK_REQUEST)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	verify(game.mode == "play","Android back resumes without mutating children inside notification propagation")
 	verify(game.forest.trees.size() == 240,"deterministic forest has all 240 markable trees")
 	verify(game.forest.doors.size() == 4 and game.forest.traps.size() == 14,"doors and hazards are present")
 	verify(game.forest.echo_positions.size() == 3,"three optional story memories")

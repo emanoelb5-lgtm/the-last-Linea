@@ -53,6 +53,7 @@ var button_reports: Array[Dictionary] = []
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	get_tree().quit_on_go_back = false
 	setup_input()
 	build_view()
 	build_hud()
@@ -1036,8 +1037,13 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_WM_CLOSE_REQUEST:
 		snapshot()
 		if mode == "play":
-			show_pause()
+			# SceneTree locks child lists while propagating mobile notifications.
+			# Build the pause UI after notification propagation has finished.
+			show_pause.call_deferred()
 	elif what == NOTIFICATION_WM_GO_BACK_REQUEST:
-		if mode == "play": show_pause()
-		elif mode == "pause": resume_game()
-		elif mode in ["settings","journal"]: settings_back()
+		handle_android_back.call_deferred()
+
+func handle_android_back() -> void:
+	if mode == "play": show_pause()
+	elif mode == "pause": resume_game()
+	elif mode in ["settings","journal"]: settings_back()

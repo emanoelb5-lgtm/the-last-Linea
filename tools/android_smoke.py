@@ -17,7 +17,7 @@ parser.add_argument('--exercise', action='store_true')
 args = parser.parse_args()
 args.output.mkdir(parents=True, exist_ok=True)
 package = 'online.b5solucoes.thelastlinea.preview'
-CRASH = r'SCRIPT ERROR:|FATAL EXCEPTION|Fatal signal|Unable to start activity|Unable to instantiate application|Program linking failed|!_start_success'
+CRASH = r'SCRIPT ERROR:|FATAL EXCEPTION|Fatal signal|Unable to start activity|Unable to instantiate application|Program linking failed|!_start_success|godot\s*:\s*ERROR:'
 
 
 def adb(*arguments, check=True):
