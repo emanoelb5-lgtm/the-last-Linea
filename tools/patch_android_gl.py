@@ -7,6 +7,7 @@ The source retains its Android/AOSP Apache-2.0 notice.
 """
 import argparse
 import io
+import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -22,8 +23,12 @@ with tempfile.TemporaryDirectory(prefix='linea-gl-') as directory:
     temp = Path(directory)
     compiled = temp/'classes'
     compiled.mkdir()
+    original_jar = temp/'original.jar'
+    with zipfile.ZipFile(aar) as original_aar:
+        original_jar.write_bytes(original_aar.read('classes.jar'))
     subprocess.run(['javac','-source','17','-target','17','-classpath',
-                    str(args.sdk/'platforms/android-36/android.jar'),'-d',str(compiled),str(source)],check=True)
+                    os.pathsep.join([str(args.sdk/'platforms/android-36/android.jar'),str(original_jar)]),
+                    '-d',str(compiled),str(source)],check=True)
     replacements = {str(p.relative_to(compiled)):p.read_bytes() for p in compiled.rglob('*.class')}
     assert 'org/godotengine/godot/gl/GLSurfaceView$GLThread.class' in replacements
     with zipfile.ZipFile(aar) as old:

@@ -488,8 +488,7 @@ func finish_intro() -> void:
 
 func report_button_after_layout(control: Control, id: String) -> void:
 	var target: WeakRef = weakref(control)
-	control.resized.connect(func(): report_button(target,id))
-	report_button.call_deferred(target,id)
+	RenderingServer.frame_post_draw.connect(report_button.bind(target,id),CONNECT_ONE_SHOT)
 
 func report_button(target: WeakRef, id: String) -> void:
 	var control: Control = target.get_ref()
