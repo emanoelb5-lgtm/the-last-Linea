@@ -19,7 +19,7 @@ env:
 jobs:
   android:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 45
     permissions:
       contents: write
     steps:
@@ -78,6 +78,22 @@ jobs:
           godot --headless --path . --export-release Android build/TheLastLinea.apk 2>&1 | tee build/export.log
           python3 -c "from pathlib import Path; assert Path('build/TheLastLinea.apk').stat().st_size > 1000000"
           python3 tools/verify_apk.py --build-tools "$ANDROID_HOME/build-tools/36.1.0"
+      - name: Enable accelerated Android test device
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Test actual ARM64 APK startup and chapter on Android
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_5
+          ram-size: 4096M
+          emulator-options: -no-window -gpu swangle -noaudio -no-boot-anim -no-snapshot -camera-back none -camera-front none
+          disable-animations: true
+          script: python3 tools/android_smoke.py --apk build/TheLastLinea.apk --output build/android-startup --require-ready --exercise --seconds 15
       - name: Create release manifest
         env:
           RELEASE_TAG: v${{ env.GAME_VERSION }}-build.${{ github.run_number }}
@@ -93,6 +109,7 @@ jobs:
             build/SHA256SUMS.txt
             build/APK-verification.txt
             build/*.log
+            build/android-startup/
           if-no-files-found: warn
       - name: Publish playable preview
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'

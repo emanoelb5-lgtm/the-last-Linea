@@ -1,19 +1,15 @@
-# The Last Linea 0.2.0 — Deixe um sinal
+# The Last Linea 0.3.0 — O viajante
 
-Refinamento do primeiro capítulo para Android 64 bits (Android 7+).
+Revisão de inicialização e do personagem do capítulo I para Android 64 bits (Android 7+).
 
-- O personagem se aproxima da árvore, ergue a lâmina e deixa a marca com gesto de corte e pequenas lascas.
-- A marca e o XP são registrados quando a ação termina. Toques repetidos não repetem a recompensa.
-- Desarme com animação e indicação de progresso; o mecanismo continua ativo até o final.
-- Pausar congela as ações, a esquiva e sua recarga. Sofrer dano interrompe a interação.
-- Destaque no chão indica qual árvore, armadilha, inscrição ou passagem está selecionada.
-- Dica inicial para aprender a deixar marcas, com opção de desligar dicas e destaques.
-- Ajuste da câmera para impedir que a suavização passe por dentro de obstáculos.
-- Marcha, movimento dos braços, lanterna e inclinação da corrida mais naturais.
-- As releases passam a acompanhar a versão informada pelo projeto.
+- Novo personagem com proporções humanas: cabeça oval, rosto, pescoço, tronco e cintura, mãos com polegares, pernas e botas arredondadas. Os volumes do corpo não usam blocos cúbicos.
+- Cotovelos e joelhos articulados para caminhar, despertar, riscar árvores e desarmar armadilhas. Casaco, lenço, bolsa, lanterna e lâmina acompanham o corpo.
+- Visual pixelado pela renderização em baixa resolução e pelos materiais, preservando a silhueta humana.
+- Áudio original pré-processado em Ogg: a abertura deixa de sintetizar centenas de milhares de amostras PCM no celular. O ambiente começa depois do primeiro quadro renderizado.
+- A superfície 3D recebe uma resolução válida antes de entrar na cena, inclusive enquanto o Android ainda informa dimensões nulas. Faixas de resolução e qualidade são limitadas.
+- Correção do cálculo da vinheta para evitar comportamento indefinido entre drivers gráficos.
+- O Actions passa a instalar e abrir o APK ARM64 em Android 15 antes da publicação, cobrindo menu, abertura do capítulo, toque e retorno do segundo plano. Logs e capturas acompanham os artefatos.
 
-O progresso da versão 0.1 continua compatível: vida, XP, marcas, memórias, armadilhas e capítulo concluído são mantidos ao atualizar o mesmo aplicativo.
+Vida, XP, marcas, memórias, armadilhas e progresso do capítulo continuam no mesmo formato de salvamento. A assinatura e a identificação do aplicativo permanecem compatíveis com as versões anteriores desta prévia.
 
-Baixe **TheLastLinea.apk** ou abra **Configurações e atualizações → Buscar atualização** no jogo. O Android solicita autorização para instalar.
-
-Esta é uma versão de teste, com a mesma identidade pública de assinatura da prévia anterior. O capítulo II ainda não está incluído.
+Baixe **TheLastLinea.apk** e instale por cima da versão anterior. Também é possível buscar a atualização nas configurações do jogo. Esta é uma versão de teste; o capítulo II ainda não está incluído.

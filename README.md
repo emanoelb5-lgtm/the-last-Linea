@@ -13,7 +13,7 @@ Criação: **Emanuel Bonfim / B5 Soluções**.
 
 ## Capítulo I — A floresta que devolve
 
-**Versão 0.2 — Deixe um sinal:** lâmina visível e animação de corte, pequenas lascas de casca, desarme com progresso, destaque do objeto selecionado e dica inicial opcional. A pausa congela ações e recargas; dano interrompe a interação. O progresso da versão 0.1 continua compatível. [Notas desta versão](docs/RELEASE_NOTES.md).
+**Versão 0.3 — O viajante:** modelo humano com rosto, mãos e membros articulados; silhueta anatômica com renderização pixelada. A abertura usa áudio preparado previamente e uma superfície 3D com tamanho válido. A publicação passa a exigir abertura e entrada no capítulo em Android. [Notas desta versão](docs/RELEASE_NOTES.md).
 
 - Abertura com câmera animada: árvores secas, névoa e um homem desacordado que desperta.
 - Pequeno mundo aberto com 240 árvores marcáveis, pedras de memória, clareira de descanso e montanhas em todo o perímetro.
@@ -42,7 +42,7 @@ Instale o APK da release. O Android pede autorização para instalar de uma font
 
 ## Engine e direção visual
 
-Godot **4.6.3**, GDScript e renderer **Compatibility**. Cenário, personagens, colisões e câmera são 3D reais, renderizados em 180p, 270p ou 360p e ampliados por vizinho mais próximo; interface em resolução independente. Há quantização de cor e dithering leve. Árvores e vegetação usam MultiMesh, névoa de profundidade e planos leves de bruma. Sem névoa volumétrica dependente de Vulkan. Modelos, shaders e áudio sintetizado são originais do projeto.
+Godot **4.6.3**, GDScript e renderer **Compatibility**. Cenário, personagens, colisões e câmera são 3D reais, renderizados em 180p, 270p ou 360p e ampliados por vizinho mais próximo; interface em resolução independente. Há quantização de cor e dithering leve. Árvores e vegetação usam MultiMesh, névoa de profundidade e planos leves de bruma. Sem névoa volumétrica dependente de Vulkan. Modelos, shaders e áudio sintetizado são originais do projeto. O viajante usa malhas anatômicas afuniladas; o efeito pixel art vem da renderização e dos materiais. Os sons são preparados uma vez com `tools/render_audio.py` e distribuídos como Ogg, sem síntese PCM durante a abertura no celular.
 
 ## Desenvolvimento e Actions
 
@@ -58,8 +58,8 @@ O workflow `Android · capítulo I` roda em pushes para `main`, pull requests e 
 1. Importa o projeto e executa testes de movimento, história, portas, armadilhas, persistência e validação do atualizador.
 2. Instala SDK Android, templates da mesma versão do Godot e compila a ponte nativa de instalação.
 3. Gera o APK ARM64 com a versão de `version.json` e código crescente (`1000 + github.run_number`).
-4. Verifica assinatura e publica o APK, manifesto de atualização e SHA-256 como release nos pushes para `main`.
-5. Mantém os arquivos e logs como artefatos do Actions. Pull requests não publicam releases.
+4. Verifica assinatura e instala o próprio APK ARM64 em Android 15 (emulador x86_64 com tradução ARM). Exige primeiro quadro renderizado, entrada no capítulo e retorno do segundo plano.
+5. Publica o APK, manifesto de atualização e SHA-256 somente após os testes, nos pushes para `main`. Mantém logs e capturas como artefatos do Actions. Pull requests não publicam releases.
 
 O atualizador consulta apenas este repositório público, cruza nome/URL/tamanho com os assets da release, confere SHA-256 após o download e entrega um `content://` privado ao instalador do Android. Nenhum token é incluído no aplicativo. Downloads parciais não são instalados e falhas de rede não interrompem a história.
 

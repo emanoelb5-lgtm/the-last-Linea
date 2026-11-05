@@ -4,6 +4,8 @@ signal stepped
 signal action_finished(kind: String, target_id: int)
 var model: Node3D
 var limbs: Array[Node3D] = []
+var joints: Array[Node3D] = []
+var head: Node3D
 var lamp: OmniLight3D
 var knife: Node3D
 var input_vector := Vector2.ZERO
@@ -25,14 +27,16 @@ var asleep := true
 func _ready() -> void:
 	var shape := CapsuleShape3D.new()
 	shape.radius = 0.3
-	shape.height = 1.75
+	shape.height = 1.82
 	var collision := CollisionShape3D.new()
 	collision.shape = shape
-	collision.position.y = 0.88
+	collision.position.y = 0.91
 	add_child(collision)
 	var art := LineaArt.character(self)
 	model = art.rig
 	limbs.assign(art.limbs)
+	joints.assign(art.joints)
+	head = art.head
 	lamp = art.light
 	knife = art.knife
 	sleep_pose()
@@ -43,7 +47,9 @@ func sleep_pose() -> void:
 	knife.visible = false
 	model.rotation.x = 0
 	model.rotation.z = PI * 0.5
-	model.position = Vector3(0.8, 0.24, 0)
+	model.position = Vector3(0.8, 0.34, 0)
+	joints[2].rotation.x = 0.3
+	joints[3].rotation.x = 0.2
 	lamp.light_energy = 0.55
 
 func stand_pose() -> void:
@@ -54,6 +60,8 @@ func stand_pose() -> void:
 	model.position = Vector3.ZERO
 	for limb in limbs:
 		limb.rotation = Vector3.ZERO
+	for joint in joints:
+		joint.rotation = Vector3.ZERO
 	lamp.light_energy = 1.1
 
 func dodge() -> bool:
@@ -148,6 +156,8 @@ func _physics_process(delta: float) -> void:
 		var angle := sin(walk_cycle) * (amplitude if moving else 0.0) * sign_value
 		limbs[i].rotation.x = lerpf(limbs[i].rotation.x, angle, delta * 16)
 		limbs[i].rotation.z = lerpf(limbs[i].rotation.z,0.0,delta*14)
+		var bend := -maxf(0.0,-sin(walk_cycle)*sign_value)*0.85 if i < 2 and moving else (0.18 if i >= 2 else 0.0)
+		joints[i].rotation.x = lerpf(joints[i].rotation.x,bend,delta*12)
 	var crouch := 0.0
 	if busy():
 		var progress := action_progress()
@@ -155,9 +165,14 @@ func _physics_process(delta: float) -> void:
 			var cutting := clampf((progress-0.45)/0.55,0.0,1.0)
 			limbs[2].rotation.x = lerpf(0.6,1.1,minf(1.0,progress*5))+sin(cutting*PI*4)*0.25
 			limbs[2].rotation.z = sin(cutting*PI*4)*0.3
+			joints[2].rotation.x = 0.3+sin(cutting*PI*4)*0.15
 		else:
 			crouch = sin(progress*PI)*0.28
 			limbs[2].rotation.x = 0.6+sin(progress*PI*6)*0.12
+			for i in 2:
+				limbs[i].rotation.x += crouch*1.6
+				joints[i].rotation.x = -crouch*3.2
+			joints[2].rotation.x = 0.7
 	model.position.y = (absf(sin(walk_cycle))*0.045 if moving else sin(Time.get_ticks_msec()*0.002)*0.012)-crouch
 	model.rotation.x = lerpf(model.rotation.x,(-0.12 if sprinting and moving else 0.0)-sin(dodge_time/0.42*PI)*0.5,delta*12)
 	model.rotation.z = sin(dodge_time / 0.42 * PI) * 0.32

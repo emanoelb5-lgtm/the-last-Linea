@@ -43,6 +43,18 @@ func _ready() -> void:
 	await capture("04-porta")
 	game.show_settings("pause")
 	await capture("05-configuracoes")
+	game.clear_overlay()
+	game.set_mode("play")
+	game.hud.visible = false
+	game.forest.focus_marker.visible = false
+	game.player.position = Vector3.ZERO
+	game.player.stand_pose()
+	game.player.model.rotation.y = 0
+	game.player.enabled = false
+	game.camera.fov = 38
+	game.camera.position = Vector3(1.6,1.4,-3.1)
+	game.camera.look_at(Vector3(0,1.0,0))
+	await capture("08-personagem-humano")
 	game.queue_free()
 	await get_tree().process_frame
 	get_tree().quit()

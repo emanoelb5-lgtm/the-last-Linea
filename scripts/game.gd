@@ -67,6 +67,21 @@ func _ready() -> void:
 		start_game(false)
 	elif "--capture-intro" in OS.get_cmdline_user_args():
 		start_game(true)
+	# Start audio only after the scene has produced a valid rendered frame.
+	RenderingServer.frame_post_draw.connect(first_frame_ready, CONNECT_ONE_SHOT)
+
+func first_frame_ready() -> void:
+	Sound.start_ambience()
+	print("LINEA_BOOT_READY version=%s viewport=%s" % [ProjectSettings.get_setting("application/config/version"),view.size])
+
+static func pixel_size(window_size: Vector2, quality: int) -> Vector2i:
+	var heights := [180,270,360]
+	var h: int = heights[clampi(quality,0,heights.size()-1)]
+	# Android can report zero size while attaching or rotating its native surface.
+	var aspect := 16.0/9.0
+	if window_size.x > 1.0 and window_size.y > 1.0 and window_size.is_finite():
+		aspect = clampf(window_size.x/window_size.y,0.5,3.5)
+	return Vector2i(maxi(2,roundi(h*aspect)),h)
 
 func setup_input() -> void:
 	# Physical keys preserve WASD on different keyboard layouts.
@@ -92,6 +107,7 @@ func build_view() -> void:
 	view.own_world_3d = true
 	view.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	view.audio_listener_enable_3d = true
+	view.size = pixel_size(size,int(State.settings.quality))
 	add_child(view)
 	forest = LineaForest.new()
 	view.add_child(forest)
@@ -122,10 +138,7 @@ func build_view() -> void:
 func resize_view() -> void:
 	if not is_instance_valid(view):
 		return
-	var heights := [180,270,360]
-	var h: int = heights[int(State.settings.quality)]
-	var aspect := maxf(size.x, 1) / maxf(size.y, 1)
-	view.size = Vector2i(roundi(h * aspect),h)
+	view.size = pixel_size(size,int(State.settings.quality))
 	if forest:
 		forest.apply_quality()
 
@@ -403,7 +416,9 @@ func show_main_menu() -> void:
 		box.add_child(button("Continuar a história",func(): start_game(false),true))
 		box.add_child(button("Novo capítulo",confirm_new))
 	else:
-		box.add_child(button("Despertar na floresta",begin_new,true))
+		var begin := button("Despertar na floresta",begin_new,true)
+		box.add_child(begin)
+		report_button_after_layout(begin,"NEW_GAME")
 	box.add_child(button("Configurações e atualizações",func(): show_settings("menu")))
 	box.add_child(button("Sobre o jogo",show_about))
 	box.add_child(label("v%s  ·  B5 SOLUÇÕES  ·  FONES RECOMENDADOS" % ProjectSettings.get_setting("application/config/version"),12,MUTED))
@@ -450,11 +465,13 @@ func start_game(with_intro: bool) -> void:
 		intro_clock = 0
 		intro_serial += 1
 		player.sleep_pose()
+		print("LINEA_INTRO_READY")
 	else:
 		player.stand_pose()
 		set_mode("play")
 		refresh_hud()
 		toast("Marque as árvores. Nem todo caminho é uma saída.",5)
+		print("LINEA_PLAY_READY")
 
 func finish_intro() -> void:
 	if mode != "intro":
@@ -467,6 +484,14 @@ func finish_intro() -> void:
 	camera_target = player.position + Vector3.UP
 	refresh_hud()
 	toast("Eu preciso me orientar. Posso riscar as árvores próximas.",5)
+	print("LINEA_PLAY_READY")
+
+func report_button_after_layout(control: Control, id: String) -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if is_instance_valid(control):
+		var center := get_viewport().get_screen_transform()*control.get_global_rect().get_center()
+		print("LINEA_BUTTON %s %d %d" % [id,roundi(center.x),roundi(center.y)])
 
 func show_pause() -> void:
 	if mode != "play":

@@ -17,6 +17,18 @@ func _ready() -> void:
 	var game = load("res://scenes/main.tscn").instantiate()
 	add_child(game)
 	await get_tree().process_frame
+	verify(game.pixel_size(Vector2.ZERO,1) == Vector2i(480,270) and game.pixel_size(Vector2(0,720),1).x >= 2,"Android surface starts with a valid pixel viewport even before layout")
+	verify(game.pixel_size(Vector2(1280,720),99) == Vector2i(640,360),"pixel quality and render dimensions stay bounded")
+	verify(game.player.limbs.size() == 4 and game.player.joints.size() == 4 and is_instance_valid(game.player.head),"human rig has a head, two arms, two legs, elbows and knees")
+	var human_mesh := LineaHumanoid.volume([Vector3(-0.1,0.1,0.1),Vector3(0.1,0.1,0.1)])
+	var human_arrays := human_mesh.surface_get_arrays(0)
+	var human_vertex: Vector3 = human_arrays[Mesh.ARRAY_VERTEX][0]
+	var human_normal: Vector3 = human_arrays[Mesh.ARRAY_NORMAL][0]
+	verify(human_normal.dot(Vector3(human_vertex.x,0,human_vertex.z)) > 0,"human mesh faces and normals point outward")
+	var audio_valid := Sound.tracks.size() == 8
+	for stream in Sound.tracks.values():
+		audio_valid = audio_valid and stream is AudioStreamOggVorbis and stream.get_length() > 0.1
+	verify(audio_valid and Sound.wind.stream.loop and Sound.drone.stream.loop,"all original sounds load from imported Ogg assets with ambient loops")
 	game.start_game(true)
 	game.process_intro(9.5)
 	verify(game.mode == "intro" and game.player.model.rotation.z < PI/2,"cutscene moves the camera and wakes the fallen man")
