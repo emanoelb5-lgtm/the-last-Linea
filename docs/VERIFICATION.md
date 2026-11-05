@@ -1,28 +1,27 @@
-# Verificação da primeira versão jogável
+# Verificação da versão 0.2 — Deixe um sinal
 
-Release: **v0.1.0-build.4** · versão Android **1004** · ARM64.
-Commit de código: `811b883080fef62f38f5bf562e82e80f72b898d3`.
+Release: **v0.2.0-build.5** · versão Android **1005** · pacote `online.b5solucoes.thelastlinea.preview`.
+Código compilado: `c8d0d7d01fca720929e6cce4364393e8d95e1ed5`.
 
 ## Resultados observados
 
-- Workflow [Android · capítulo I](https://github.com/emanoelb5-lgtm/the-last-Linea/actions/runs/42056246777): **success**.
-- **39 verificações automatizadas de integração**, sem falhas, executadas no Godot 4.6.3. Incluem movimento físico, abertura/visibilidade, dois toques simultâneos, marcação sem XP duplicado, armadilhas e esquiva, portas, oito direções de descoberta da montanha, descanso, salvamento, final e regras de segurança do manifesto de atualização.
-- APK publicado baixado e comparado com `update.json`: tamanho e SHA-256 conferem.
-- `apksigner verify`: assinatura APK v2 válida, RSA 2048. Esta é a identidade pública de TESTE documentada no README.
-- `aapt`: pacote `online.b5solucoes.thelastlinea.preview`, Android mínimo API 24, alvo API 36, orientação horizontal, classificação correta como jogo e ponte nativa de atualização presente.
-- Atualizador real executado no Godot desktop simulando um código de versão anterior: consulta da release, leitura do manifesto, download integral do APK e SHA-256 **passaram**. Esse teste usou a rede disponível no ambiente de desenvolvimento; o aplicativo distribuído usa HTTPS normal, sem proxy embutido.
-- Capturas reais em **1280 × 720 (16:9)**: abertura, exploração e porta. São renderizações do jogo, sem composição ilustrativa externa.
+- [GitHub Actions](https://github.com/emanoelb5-lgtm/the-last-Linea/actions/runs/42074160508): **success**. O workflow gerou, verificou e publicou o APK e o manifesto.
+- **47 verificações de integração do jogo**, sem falhas. Além do movimento, portas, montanha em oito direções, salvamento e final, cobrem corte com recompensa somente ao terminar, pausa da ação, cancelamento por dano, desarme com duração e proteção da câmera durante a suavização.
+- **3 testes de preparação de release**, sem falhas: propagação da versão informada, recompilação sem duplicar dados de assinatura e rejeição de metadados inválidos.
+- Leitura de progresso no formato anterior: vida, XP, marcas, memórias, armadilhas, montanha e posição continuam compatíveis. O esquema de salvamento continua na versão 1.
+- O verificador do APK no Actions confirmou assinatura v2, identificação como jogo, orientação horizontal, ARM64, versões do Android e presença da ponte nativa de instalação.
+- O arquivo publicado foi baixado separadamente e teve tamanho e SHA-256 comparados com `update.json`.
+- O atualizador real do jogo, executado no Godot desktop simulando o build anterior **1004**, encontrou a versão **1005**, baixou todo o APK e confirmou o SHA-256. O teste utilizou a rede do ambiente de desenvolvimento; nenhum proxy foi incorporado ao aplicativo.
+- Capturas reais da aproximação, corte e marca concluída foram renderizadas em **1280 × 720 (16:9)**. O gesto, a barra de progresso, o destaque e a recompensa são parte do jogo.
 
-O certificado de assinatura coincide com a release anterior (build 3), e o código de versão aumentou de 1003 para 1004. A atualização efetiva pelo instalador no telefone ainda precisa de teste físico.
-
-APK: **73759948 bytes**.
+APK publicado: **73767219 bytes**.
 
 ```text
-SHA-256: ff08fa20542790d293e359e70858b6b5ed009d84ee2fb2e4cbca4c85c2508bbf
+SHA-256: 8cc695ebf5ba429138afa7ba52f79bdd1bf5e2d1a56be1ff3bc0c5003dd8ed5b
 ```
 
-## Limites desta validação
+## Teste físico pendente
 
-A instalação e o desempenho em um telefone Android físico ainda não foram observados. Conferir no Galaxy A56 o comportamento do instalador, a atualização da versão N para N+1 sem desinstalar, os dois dedos na tela, o retorno do segundo plano, a fluidez e a temperatura. Os testes no Godot desktop e a verificação do APK não comprovam FPS no telefone.
+Não houve acesso a um telefone Android físico. A instalação pelo sistema, a atualização de 1004 para 1005 sem desinstalar e o desempenho/temperatura no Galaxy A56 ainda precisam ser conferidos no aparelho. Os testes no Godot desktop e a verificação do APK não comprovam FPS no telefone.
 
-Não há capítulo II, combate ou inimigos nesta versão. As dificuldades do primeiro capítulo são orientação, portas de retorno e armadilhas. O projeto já tem progressão e persistência para os próximos capítulos.
+A mesma identidade de assinatura de teste e o mesmo ID de pacote foram mantidos. Não desinstale a versão anterior se quiser preservar os dados locais ao atualizar.
