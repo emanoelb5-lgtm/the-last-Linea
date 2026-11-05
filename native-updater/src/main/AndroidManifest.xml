@@ -3,7 +3,7 @@
     <application>
         <meta-data android:name="org.godotengine.plugin.v2.LineaUpdater"
             android:value="online.b5solucoes.linea.updater.LineaUpdater" />
-        <provider android:name="androidx.core.content.FileProvider"
+        <provider android:name="online.b5solucoes.linea.updater.LineaUpdateProvider"
             android:authorities="${applicationId}.linea.updates"
             android:exported="false" android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS"

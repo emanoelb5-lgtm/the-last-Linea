@@ -20,6 +20,7 @@ if not (root / "android/build/build.gradle").exists():
     with zipfile.ZipFile(templates / "android_source.zip") as source:
         source.extractall(root / "android/build")
 (root / "android/.build_version").write_text("4.6.3.stable")
+(root / "android/build/.gdignore").touch()
 (root / "android/build/gradlew").chmod(0o755)
 
 config_dir = Path(os.environ.get("XDG_CONFIG_HOME", Path.home()/".config"))/"godot"
@@ -31,6 +32,7 @@ editor_settings.write_text('[gd_resource type="EditorSettings" format=3]\n\n[res
 
 build = root / "build"
 build.mkdir(exist_ok=True)
+(build / ".gdignore").touch()
 # Public Android DEBUG identity for this preview package only; never a production key.
 key = build / "preview.keystore"
 key.write_bytes(base64.b64decode((root/"tools/preview-signing.base64").read_text()))

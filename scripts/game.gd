@@ -33,6 +33,7 @@ var context_label: Label
 var interact_button: Button
 var dodge_button: Button
 var sprint_button: Button
+var pause_button: Button
 var fps_label: Label
 var update_label: Label
 var update_button: Button
@@ -48,6 +49,7 @@ var interaction: Dictionary = {}
 var booted := false
 
 func _ready() -> void:
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	setup_input()
 	build_view()
 	build_hud()
@@ -216,6 +218,8 @@ func build_hud() -> void:
 	compass_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hud.add_child(compass_label)
 	var pause := button("II",show_pause)
+	pause_button = pause
+	pause.focus_mode = Control.FOCUS_NONE
 	pause.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	pause.position = Vector2(-82,24)
 	pause.size = Vector2(54,48)
@@ -247,6 +251,8 @@ func build_hud() -> void:
 	sprint_button.position = Vector2(-169,-174)
 	sprint_button.size = Vector2(134,48)
 	hud.add_child(sprint_button)
+	for action_button in [interact_button,dodge_button,sprint_button]:
+		action_button.focus_mode = Control.FOCUS_NONE
 	var help := label("WASD  mover   ·   mouse direito  câmera   ·   E  interagir   ·   espaço  esquivar",13,MUTED)
 	help.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	help.position = Vector2(-360,-21)
@@ -622,6 +628,23 @@ func rotate_camera(delta: Vector2) -> void:
 	cam_yaw -= delta.x * 0.005 * float(State.settings.sensitivity)
 	cam_pitch = clampf(cam_pitch + delta.y * 0.003 * float(State.settings.sensitivity),0.2,0.95)
 
+func _input(event: InputEvent) -> void:
+	if mode != "play" or not booted:
+		return
+	# Ordinary GUI Buttons use mouse emulation, which only follows one finger.
+	# Handle gameplay actions as real touch events so the joystick can stay held.
+	if event is InputEventScreenTouch and event.pressed:
+		for action_button in [interact_button,dodge_button,sprint_button,pause_button]:
+			if action_button.visible and not action_button.disabled and action_button.get_global_rect().has_point(event.position):
+				get_viewport().set_input_as_handled()
+				if action_button.toggle_mode:
+					action_button.button_pressed = not action_button.button_pressed
+				action_button.pressed.emit()
+				return
+	elif (event is InputEventMouseButton or event is InputEventMouseMotion) and event.device == -1:
+		# Avoid delivering a synthetic click after the same touch action.
+		get_viewport().set_input_as_handled()
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause"):
 		if mode == "play": show_pause()
@@ -720,7 +743,7 @@ func update_camera(delta: float) -> void:
 	camera_target = camera_target.lerp(target,1.0-exp(-delta*9))
 	var offset := Vector3(sin(cam_yaw)*cos(cam_pitch),sin(cam_pitch),cos(cam_yaw)*cos(cam_pitch))*8.8
 	var desired := camera_target + offset
-	var query := PhysicsRayQueryParameters3D.create(camera_target,desired,1,[player.get_rid()])
+	var query := PhysicsRayQueryParameters3D.create(camera_target,desired,3,[player.get_rid()])
 	var hit := forest.get_world_3d().direct_space_state.intersect_ray(query)
 	if not hit.is_empty():
 		desired = hit.position + (camera_target-hit.position).normalized()*0.35

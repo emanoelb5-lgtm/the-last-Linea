@@ -11,6 +11,7 @@ func verify(condition: bool, title: String) -> void:
 		print("PASS: ",title)
 
 func _ready() -> void:
+	get_tree().root.size = Vector2i(1280,720)
 	await get_tree().process_frame
 	State.new_game()
 	var game = load("res://scenes/main.tscn").instantiate()
@@ -26,6 +27,36 @@ func _ready() -> void:
 	verify(game.forest.trees.size() == 240,"deterministic forest has all 240 markable trees")
 	verify(game.forest.doors.size() == 4 and game.forest.traps.size() == 14,"doors and hazards are present")
 	verify(game.forest.echo_positions.size() == 3,"three optional story memories")
+	var contact := InputEventScreenTouch.new()
+	contact.index = 0
+	contact.position = Vector2(128,596)
+	contact.pressed = true
+	get_viewport().push_input(contact,true)
+	var drag := InputEventScreenDrag.new()
+	drag.index = 0
+	drag.position = Vector2(160,570)
+	drag.relative = Vector2(32,-26)
+	get_viewport().push_input(drag,true)
+	Input.flush_buffered_events()
+	await get_tree().process_frame
+	var second_contact := InputEventScreenTouch.new()
+	second_contact.index = 1
+	second_contact.position = game.dodge_button.get_global_rect().get_center()
+	second_contact.pressed = true
+	get_viewport().push_input(second_contact,true)
+	Input.flush_buffered_events()
+	await get_tree().process_frame
+	verify(game.touch.movement.length() > 0.1 and game.player.dodge_cooldown > 0,"two fingers can hold movement and trigger a dodge simultaneously")
+	var release: InputEventScreenTouch = contact.duplicate()
+	var second_release: InputEventScreenTouch = second_contact.duplicate()
+	release.pressed = false
+	second_release.pressed = false
+	get_viewport().push_input(release,true)
+	get_viewport().push_input(second_release,true)
+	Input.flush_buffered_events()
+	game.touch.reset()
+	game.player.dodge_time = 0
+	game.player.dodge_cooldown = 0
 	# Exercise actual CharacterBody movement and collisions via the InputMap.
 	Input.action_press("forward")
 	await get_tree().create_timer(0.7).timeout

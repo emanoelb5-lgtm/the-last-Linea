@@ -152,6 +152,20 @@ func build_trees() -> void:
 			body.add_child(cs)
 			add_child(body)
 			body.position = pos
+			# A separate camera layer covers upper branches without making the
+			# player collide with empty air around a tree's base.
+			var camera_body := StaticBody3D.new()
+			camera_body.collision_layer = 2
+			camera_body.collision_mask = 0
+			var camera_shape := CollisionShape3D.new()
+			var camera_volume := CylinderShape3D.new()
+			camera_volume.radius = 1.25
+			camera_volume.height = 11.0
+			camera_shape.shape = camera_volume
+			camera_shape.position.y = 5.5
+			camera_body.add_child(camera_shape)
+			add_child(camera_body)
+			camera_body.position = pos
 			trees.append({"id": id, "position": pos, "marked": false})
 	for id in State.marks:
 		mark_tree(id)
