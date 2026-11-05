@@ -5,6 +5,7 @@ from pathlib import Path
 import re
 import subprocess
 import time
+import xml.etree.ElementTree as ET
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--apk', type=Path, required=True)
@@ -27,6 +28,28 @@ def screenshot(name):
     result = subprocess.run(['adb', 'exec-out', 'screencap', '-p'], capture_output=True, timeout=30)
     if result.returncode == 0:
         (args.output/name).write_bytes(result.stdout)
+
+
+def dismiss_system_tutorial():
+    # Android's first-use immersive tutorial can cover the game's whole surface.
+    # Inspect native UI nodes; never send a speculative tap into the game.
+    adb('shell', 'uiautomator', 'dump', '/sdcard/linea-window.xml', check=False)
+    source = adb('shell', 'cat', '/sdcard/linea-window.xml', check=False)
+    (args.output/'native-window.xml').write_text(source)
+    try:
+        root = ET.fromstring(source)
+    except ET.ParseError:
+        return
+    for node in root.iter('node'):
+        if node.get('text') not in ('Got it', 'OK') or node.get('package') != 'com.android.systemui':
+            continue
+        bounds = re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', node.get('bounds', ''))
+        if bounds:
+            x1,y1,x2,y2 = map(int,bounds.groups())
+            adb('shell', 'input', 'tap', str((x1+x2)//2), str((y1+y2)//2))
+            time.sleep(2)
+            print('Dismissed Android immersive-mode tutorial', flush=True)
+            return
 
 
 def app_logs():
@@ -66,6 +89,7 @@ try:
     print('ABILIST:', adb('shell', 'getprop', 'ro.product.cpu.abilist').strip(), flush=True)
     # A reproducible 16:9 landscape surface; no dependency on a runner's skin.
     adb('shell', 'wm', 'size', '720x1280')
+    adb('shell', 'settings', 'put', 'secure', 'immersive_mode_confirmations', 'confirmed')
     print(adb('install', '--no-streaming', '-r', str(args.apk)), flush=True)
     adb('shell', 'am', 'force-stop', package, check=False)
     adb('logcat', '-c')
@@ -76,6 +100,7 @@ try:
     print(launch, flush=True)
     if args.require_ready:
         wait_for('LINEA_BOOT_READY')
+    dismiss_system_tutorial()
     screenshot('01-menu.png')
     if args.exercise:
         logs = wait_for('LINEA_BUTTON NEW_GAME')

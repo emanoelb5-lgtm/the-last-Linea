@@ -42,6 +42,7 @@ func _exit_tree() -> void:
 		if is_instance_valid(player):
 			player.stop()
 			player.stream = null
+	tracks.clear()
 
 func play(kind: String) -> void:
 	if not effects or not tracks.has(kind):
