@@ -9,7 +9,7 @@ Criação: **Emanuel Bonfim / B5 Soluções**.
 
 ![Personagem humano do capítulo I, renderizado no jogo](docs/screenshots/08-personagem-humano.webp)
 
-[Ver a abertura](docs/screenshots/02-abertura.webp) · [Ver a exploração](docs/screenshots/03-exploracao.webp) · [Ver a animação de corte](docs/screenshots/06-riscando.webp) · [Ver a marca concluída](docs/screenshots/07-marca.webp)
+[Ver no Android](docs/screenshots/09-android.webp) · [Ver a pausa no Android](docs/screenshots/10-android-pausa.webp) · [Ver a abertura](docs/screenshots/02-abertura.webp) · [Ver a exploração](docs/screenshots/03-exploracao.webp) · [Ver a animação de corte](docs/screenshots/06-riscando.webp) · [Ver a marca concluída](docs/screenshots/07-marca.webp)
 
 ## Capítulo I — A floresta que devolve
 
