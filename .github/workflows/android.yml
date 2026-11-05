@@ -1,0 +1,111 @@
+name: Android · capítulo I
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['docs/**', 'README.md']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  GODOT_VERSION: 4.6.3
+
+jobs:
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Cache Godot
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.local/bin/godot
+            ~/.local/share/godot/export_templates/4.6.3.stable
+          key: godot-linux-android-4.6.3-v1
+      - name: Install pinned Godot and Android templates
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.local/bin" "$HOME/.local/share/godot/export_templates/4.6.3.stable"
+          curl --fail -L --retry 3 -o /tmp/godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d /tmp/godot-editor
+          install /tmp/godot-editor/Godot_v${GODOT_VERSION}-stable_linux.x86_64 "$HOME/.local/bin/godot"
+          curl --fail -L --retry 3 -o /tmp/templates.tpz "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -j /tmp/templates.tpz 'templates/android*' -d "$HOME/.local/share/godot/export_templates/4.6.3.stable"
+      - name: Add engine to PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Check imports, gameplay, saves and updater rules
+        run: python3 tools/run_checks.py
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK packages
+        run: sdkmanager 'platform-tools' 'platforms;android-36' 'build-tools;36.1.0' 'platforms;android-35'
+      - name: Prepare preview version and stable TEST signing identity
+        run: python3 tools/prepare_build.py --code "$((1000 + GITHUB_RUN_NUMBER))"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
+      - name: Build Android installation bridge
+        shell: bash
+        run: |
+          set -euo pipefail
+          android/build/gradlew -p native-updater assembleRelease --no-daemon
+          mkdir -p addons/linea_updater/bin
+          cp native-updater/build/outputs/aar/linea-updater-release.aar addons/linea_updater/bin/linea-updater.aar
+      - name: Export signed Android APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --editor --import --quit 2>&1 | tee build/import.log
+          godot --headless --path . --export-release Android build/TheLastLinea.apk 2>&1 | tee build/export.log
+          python3 -c "from pathlib import Path; assert Path('build/TheLastLinea.apk').stat().st_size > 1000000"
+          "$ANDROID_HOME/build-tools/36.1.0/apksigner" verify --verbose build/TheLastLinea.apk
+      - name: Create release manifest
+        env:
+          RELEASE_TAG: v0.1.0-build.${{ github.run_number }}
+        run: python3 tools/release_manifest.py
+      - name: Upload APK and diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TheLastLinea-Android-${{ github.run_number }}
+          path: |
+            build/TheLastLinea.apk
+            build/update.json
+            build/SHA256SUMS.txt
+            build/*.log
+          if-no-files-found: warn
+      - name: Publish playable preview
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v0.1.0-build.${{ github.run_number }}
+          name: Capítulo I · versão de teste ${{ github.run_number }}
+          make_latest: true
+          prerelease: false
+          body: |
+            Primeira versão de teste de The Last Linea para Android 64 bits (Android 7+).
+
+            Capítulo I: floresta 3D pixelada, abertura, exploração, árvores marcáveis, armadilhas, portas de retorno e a montanha.
+            Vida, experiência, esquiva, memórias e progresso local. Sem fome.
+
+            Baixe **TheLastLinea.apk**. Atualizações seguintes também ficam em Configurações dentro do jogo.
+            O instalador do Android solicita sua autorização. Esta distribuição usa identidade de assinatura de TESTE, separada de uma futura edição de produção.
+          files: |
+            build/TheLastLinea.apk
+            build/update.json
+            build/SHA256SUMS.txt

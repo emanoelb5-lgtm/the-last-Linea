@@ -1,0 +1,17 @@
+plugins {
+    id 'com.android.library' version '8.7.3'
+}
+android {
+    namespace 'online.b5solucoes.linea.updater'
+    compileSdk 35
+    defaultConfig { minSdk 24 }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    buildTypes { release { minifyEnabled false } }
+}
+dependencies {
+    compileOnly files('../android/build/libs/release/godot-lib.template_release.aar')
+    implementation 'androidx.core:core:1.15.0'
+}
