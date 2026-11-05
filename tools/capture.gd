@@ -22,8 +22,9 @@ func _ready() -> void:
 	await capture("02-abertura")
 	game.finish_intro()
 	game.player.position = Vector3(1.4,0,-0.7)
-	game.camera.position = Vector3(7.5,5.2,8.0)
-	game.camera.look_at(Vector3(1.4,1,-0.7))
+	game.camera_target = game.player.position+Vector3(0,1.15,0)
+	game.camera.position = game.player.position+Vector3(0,5.5,8)
+	game.update_camera(1.0)
 	game.update_interaction()
 	game.toast_time = 0
 	game.toast_label.visible = false

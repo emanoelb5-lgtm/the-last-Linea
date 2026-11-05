@@ -28,6 +28,13 @@ func apply_volumes() -> void:
 		drone.volume_db = linear_to_db(maxf(float(State.settings.ambience) * 0.12, 0.0001))
 		effects.volume_db = linear_to_db(maxf(float(State.settings.effects) * 0.6, 0.0001))
 
+func _exit_tree() -> void:
+	for player in [wind,drone,effects]:
+		if is_instance_valid(player):
+			player.stop()
+			player.stream = null
+	cache.clear()
+
 func play(kind: String) -> void:
 	if not effects:
 		return

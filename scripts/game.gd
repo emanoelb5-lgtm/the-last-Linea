@@ -173,8 +173,15 @@ func bar(color: Color, width: float, height: float) -> ProgressBar:
 	node.show_percentage = false
 	node.max_value = 100
 	node.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	node.add_theme_stylebox_override("background",style(Color("132024"),Color("4a5b51"),1))
-	node.add_theme_stylebox_override("fill",style(color,color,1))
+	var background := style(Color("132024"),Color("4a5b51"),1)
+	var fill := style(color,color,1)
+	for s in [background,fill]:
+		s.content_margin_left = 0
+		s.content_margin_right = 0
+		s.content_margin_top = 0
+		s.content_margin_bottom = 0
+	node.add_theme_stylebox_override("background",background)
+	node.add_theme_stylebox_override("fill",fill)
 	return node
 
 func build_hud() -> void:
@@ -452,12 +459,27 @@ func resume_game() -> void:
 
 func show_about() -> void:
 	set_mode("about")
-	var box := shell("O que fica na floresta", "THE LAST LINEA · PRIMEIRA VERSÃO JOGÁVEL",630,465)
+	var box := shell("O que fica na floresta", "THE LAST LINEA · PRIMEIRA VERSÃO JOGÁVEL",650,580)
 	box.add_child(paragraph("Um RPG de mistério em capítulos. Explore, faça suas próprias marcas e descubra o que insiste em trazer você de volta.",22))
 	box.add_child(paragraph("Criação: Emanuel Bonfim / B5 Soluções\nEngine: Godot 4.6.3 (licença MIT)\nModelos, efeitos e sons originais gerados pelo código do jogo.",18,MUTED))
 	box.add_child(paragraph("Celular: arraste à esquerda para andar; à direita para olhar. Toque para interagir, correr ou esquivar. Controle Bluetooth também é aceito.",18))
 	spacer(box)
+	box.add_child(button("Licenças da engine",show_licenses))
 	box.add_child(button("Voltar",show_main_menu,true))
+
+func show_licenses() -> void:
+	set_mode("about")
+	var box := shell("Licenças", "GODOT ENGINE E COMPONENTES DE TERCEIROS",760,620)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	box.add_child(scroll)
+	var text_value := Engine.get_license_text()+"\n\n"
+	for component in Engine.get_copyright_info():
+		text_value += str(component.get("name",""))+"\n"+JSON.stringify(component.get("parts",[]),"  ")+"\n\n"
+	text_value += JSON.stringify(Engine.get_license_info(),"  ")
+	scroll.add_child(paragraph(text_value,15,MUTED))
+	box.add_child(button("Voltar",show_about,true))
 
 func show_settings(origin: String) -> void:
 	return_mode = origin
@@ -637,18 +659,18 @@ func process_intro(delta: float) -> void:
 	intro_clock += delta
 	var t := intro_clock
 	if t < 4.0:
-		camera.position = Vector3(lerpf(18,10,t/4),lerpf(11,6,t/4),lerpf(13,9,t/4))
+		camera.position = Vector3(0,lerpf(10,5.8,t/4),lerpf(12,7,t/4))
 		camera.look_at(Vector3(0,0.5,0))
 		caption.text = "Não há vento. Mesmo assim, as árvores sussurram."
 	elif t < 8.0:
-		camera.position = Vector3(lerpf(7,3.6,(t-4)/4),2.5,lerpf(6,4.5,(t-4)/4))
+		camera.position = Vector3(lerpf(0,1.4,(t-4)/4),2.5,lerpf(4.8,3.7,(t-4)/4))
 		camera.look_at(Vector3(0,0.6,0))
 		caption.text = "No chão frio, um homem respira.\nEle não se lembra de ter chegado."
 	elif t < 11.0:
 		var progress := smoothstep(8.0,11.0,t)
 		player.model.rotation.z = lerpf(PI/2,0,progress)
 		player.model.position = Vector3(lerpf(0.8,0,progress),lerpf(0.24,0,progress),0)
-		camera.position = Vector3(3.6,lerpf(2.5,4,(t-8)/3),4.5)
+		camera.position = Vector3(lerpf(1.4,0,(t-8)/3),lerpf(2.5,4,(t-8)/3),lerpf(3.7,6,(t-8)/3))
 		camera.look_at(Vector3(0,1,0))
 		caption.text = "‘Onde eu estou?’"
 	elif t < 14.5:

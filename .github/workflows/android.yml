@@ -52,6 +52,8 @@ jobs:
       - name: Check imports, gameplay, saves and updater rules
         run: python3 tools/run_checks.py
       - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
       - name: Install Android SDK packages
         run: sdkmanager 'platform-tools' 'platforms;android-36' 'build-tools;36.1.0' 'platforms;android-35'
       - name: Prepare preview version and stable TEST signing identity

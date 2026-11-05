@@ -19,6 +19,8 @@ func _ready() -> void:
 	game.start_game(true)
 	game.process_intro(9.5)
 	verify(game.mode == "intro" and game.player.model.rotation.z < PI/2,"cutscene moves the camera and wakes the fallen man")
+	var sight := PhysicsRayQueryParameters3D.create(game.camera.position,Vector3(0,0.8,0),1,[game.player.get_rid()])
+	verify(game.forest.get_world_3d().direct_space_state.intersect_ray(sight).is_empty(),"waking cutscene keeps the man visible between the trees")
 	game.finish_intro()
 	verify(State.intro_seen and game.mode == "play","intro skip enters gameplay and persists")
 	verify(game.forest.trees.size() == 240,"deterministic forest has all 240 markable trees")
