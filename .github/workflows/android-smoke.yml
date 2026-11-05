@@ -1,44 +1,24 @@
-name: Android startup diagnostic
+name: Android native crash symbols
 on:
   push:
     branches: [diagnose/android-startup]
-    paths: ['.github/workflows/android-smoke.yml', 'tools/android_smoke.py']
+    paths: ['.github/workflows/android-smoke.yml']
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  startup:
+  symbols:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-      - name: Enable KVM
+      - name: Resolve original Android audio backtrace
+        shell: bash
         run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-      - name: Download reported release
-        run: |
-          mkdir -p build
-          curl --fail -L --retry 3 -o build/TheLastLinea.apk https://github.com/emanoelb5-lgtm/the-last-Linea/releases/download/v0.2.0-build.5/TheLastLinea.apk
-      - name: Launch published ARM64 APK on Android
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 35
-          target: google_apis
-          arch: x86_64
-          profile: pixel_5
-          ram-size: 4096M
-          emulator-options: -no-window -gpu swangle -noaudio -no-boot-anim -no-snapshot -camera-back none -camera-front none
-          disable-animations: true
-          script: python3 tools/android_smoke.py --apk build/TheLastLinea.apk --output build/android-startup --seconds 35
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: Android-startup-diagnostic
-          path: build/android-startup
-          if-no-files-found: warn
+          set -euo pipefail
+          curl --fail -L --retry 3 -o /tmp/symbols.zip https://github.com/godotengine/godot-builds/releases/download/4.6.3-stable/Godot_native_debug_symbols.4.6.3.stable.template_release.android.zip
+          unzip -Z1 /tmp/symbols.zip
+          mkdir /tmp/symbols
+          unzip -q /tmp/symbols.zip '*arm64-v8a*' -d /tmp/symbols
+          linea_symbols="$(find /tmp/symbols -name '*.so' -print -quit)"
+          linea_resolver="$(find /usr/local/lib/android/sdk/ndk -name llvm-addr2line -print -quit)"
+          "$linea_resolver" -C -f -i -e "$linea_symbols" 0x30b67d8 0x3095350 0x30931f0 0x118eec0
