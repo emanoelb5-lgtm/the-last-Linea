@@ -50,7 +50,9 @@ jobs:
       - name: Add engine to PATH
         run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Check imports, gameplay, saves and updater rules
-        run: python3 tools/run_checks.py
+        run: |
+          python3 -m unittest discover -s tests -p 'test_*.py'
+          python3 tools/run_checks.py
       - uses: android-actions/setup-android@v3
         with:
           packages: 'platform-tools'
@@ -78,7 +80,7 @@ jobs:
           python3 tools/verify_apk.py --build-tools "$ANDROID_HOME/build-tools/36.1.0"
       - name: Create release manifest
         env:
-          RELEASE_TAG: v0.1.0-build.${{ github.run_number }}
+          RELEASE_TAG: v${{ env.GAME_VERSION }}-build.${{ github.run_number }}
         run: python3 tools/release_manifest.py
       - name: Upload APK and diagnostic logs
         if: always()
@@ -96,18 +98,11 @@ jobs:
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.1.0-build.${{ github.run_number }}
-          name: Capítulo I · versão de teste ${{ github.run_number }}
+          tag_name: v${{ env.GAME_VERSION }}-build.${{ github.run_number }}
+          name: Capítulo I · ${{ env.GAME_VERSION }} · teste ${{ github.run_number }}
           make_latest: true
           prerelease: false
-          body: |
-            Primeira versão de teste de The Last Linea para Android 64 bits (Android 7+).
-
-            Capítulo I: floresta 3D pixelada, abertura, exploração, árvores marcáveis, armadilhas, portas de retorno e a montanha.
-            Vida, experiência, esquiva, memórias e progresso local. Sem fome.
-
-            Baixe **TheLastLinea.apk**. Atualizações seguintes também ficam em Configurações dentro do jogo.
-            O instalador do Android solicita sua autorização. Esta distribuição usa identidade de assinatura de TESTE, separada de uma futura edição de produção.
+          body_path: build/RELEASE_NOTES.md
           files: |
             build/TheLastLinea.apk
             build/update.json

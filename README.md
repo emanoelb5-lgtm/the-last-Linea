@@ -13,6 +13,8 @@ Criação: **Emanuel Bonfim / B5 Soluções**.
 
 ## Capítulo I — A floresta que devolve
 
+**Versão 0.2 — Deixe um sinal:** lâmina visível e animação de corte, pequenas lascas de casca, desarme com progresso, destaque do objeto selecionado e dica inicial opcional. A pausa congela ações e recargas; dano interrompe a interação. O progresso da versão 0.1 continua compatível. [Notas desta versão](docs/RELEASE_NOTES.md).
+
 - Abertura com câmera animada: árvores secas, névoa e um homem desacordado que desperta.
 - Pequeno mundo aberto com 240 árvores marcáveis, pedras de memória, clareira de descanso e montanhas em todo o perímetro.
 - Riscos nas árvores persistem entre retornos, mortes e sessões. Cada árvore concede XP apenas uma vez.
@@ -47,6 +49,7 @@ Godot **4.6.3**, GDScript e renderer **Compatibility**. Cenário, personagens, c
 Abra `project.godot` no Godot 4.6.3. Não exige licença de engine, servidor, conta de jogador ou assets pagos.
 
 ```bash
+python3 -m unittest discover -s tests -p 'test_*.py'
 python3 tools/run_checks.py
 ```
 
@@ -54,7 +57,7 @@ O workflow `Android · capítulo I` roda em pushes para `main`, pull requests e 
 
 1. Importa o projeto e executa testes de movimento, história, portas, armadilhas, persistência e validação do atualizador.
 2. Instala SDK Android, templates da mesma versão do Godot e compila a ponte nativa de instalação.
-3. Gera o APK ARM64 com código de versão crescente (`1000 + github.run_number`).
+3. Gera o APK ARM64 com a versão de `version.json` e código crescente (`1000 + github.run_number`).
 4. Verifica assinatura e publica o APK, manifesto de atualização e SHA-256 como release nos pushes para `main`.
 5. Mantém os arquivos e logs como artefatos do Actions. Pull requests não publicam releases.
 

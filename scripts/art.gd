@@ -115,6 +115,20 @@ static func character(parent: Node3D) -> Dictionary:
 			box(pivot, Vector3(0.2, 0.43, 0.24), Vector3(0, -0.2, 0), coat)
 			box(pivot, Vector3(0.16, 0.14, 0.18), Vector3(0, -0.46, 0), skin)
 		limbs.append(pivot)
+	var knife := Node3D.new()
+	knife.name = "MarkingKnife"
+	limbs[2].add_child(knife)
+	knife.position = Vector3(0,-0.49,0)
+	var steel := material(Color("b4c4bd"),0.12)
+	box(knife,Vector3(0.075,0.18,0.08),Vector3(0,-0.09,0),leather)
+	box(knife,Vector3(0.17,0.035,0.13),Vector3(0,-0.19,0),boot)
+	box(knife,Vector3(0.035,0.27,0.11),Vector3(0,-0.34,0),steel)
+	var point := MeshInstance3D.new()
+	point.mesh = cylinder(0.055,0.0,0.11,4)
+	point.material_override = steel
+	point.position.y = -0.53
+	point.rotation.z = PI
+	knife.add_child(point)
 	var lantern := Node3D.new()
 	limbs[3].add_child(lantern)
 	lantern.position = Vector3(0, -0.63, -0.03)
@@ -128,4 +142,4 @@ static func character(parent: Node3D) -> Dictionary:
 	light.omni_attenuation = 1.6
 	light.shadow_enabled = false
 	lantern.add_child(light)
-	return {"rig": rig, "limbs": limbs, "light": light}
+	return {"rig": rig, "limbs": limbs, "light": light, "knife":knife}

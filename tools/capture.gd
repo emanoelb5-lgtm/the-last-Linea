@@ -29,6 +29,13 @@ func _ready() -> void:
 	game.toast_time = 0
 	game.toast_label.visible = false
 	await capture("03-exploracao")
+	game.interact()
+	await get_tree().create_timer(0.62).timeout
+	game.update_interaction()
+	await capture("06-riscando")
+	await get_tree().create_timer(0.6).timeout
+	game.update_interaction()
+	await capture("07-marca")
 	game.player.position = game.forest.door_positions[0]+Vector3(0,0,4)
 	game.camera.position = game.player.position+Vector3(6,4.8,7)
 	game.camera.look_at(game.forest.door_positions[0]+Vector3(0,1.3,0))

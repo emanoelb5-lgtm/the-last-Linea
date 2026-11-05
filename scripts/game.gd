@@ -30,6 +30,8 @@ var level_label: Label
 var goal_label: Label
 var compass_label: Label
 var context_label: Label
+var guide_label: Label
+var action_bar: ProgressBar
 var interact_button: Button
 var dodge_button: Button
 var sprint_button: Button
@@ -96,6 +98,7 @@ func build_view() -> void:
 	player = LineaPlayer.new()
 	forest.add_child(player)
 	player.stepped.connect(func(): Sound.play("step"))
+	player.action_finished.connect(finish_interaction)
 	camera = Camera3D.new()
 	camera.fov = 58
 	camera.near = 0.1
@@ -233,6 +236,12 @@ func build_hud() -> void:
 	context_label.size = Vector2(540,35)
 	context_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hud.add_child(context_label)
+	action_bar = bar(GREEN,240,5)
+	action_bar.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	action_bar.position = Vector2(-120,-97)
+	action_bar.size = Vector2(240,5)
+	action_bar.visible = false
+	hud.add_child(action_bar)
 	interact_button = button("INTERAGIR · E",interact,true)
 	interact_button.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	interact_button.position = Vector2(-120,-83)
@@ -263,6 +272,12 @@ func build_hud() -> void:
 	fps_label = label("",13,MUTED)
 	fps_label.position = Vector2(30,139)
 	hud.add_child(fps_label)
+	guide_label = paragraph("DEIXE UM SINAL\nChegue perto de uma árvore e toque em RISCAR ÁRVORE. Suas marcas vão ajudar na volta.",17,MUTED)
+	guide_label.position = Vector2(30,172)
+	guide_label.size = Vector2(270,100)
+	guide_label.add_theme_color_override("font_shadow_color",Color.BLACK)
+	guide_label.add_theme_constant_override("shadow_offset_y",2)
+	hud.add_child(guide_label)
 
 func build_effects() -> void:
 	toast_label = label("",21,CREAM)
@@ -361,6 +376,11 @@ func shell(title: String, subtitle: String, width: float = 650, height: float = 
 	return box
 
 func set_mode(value: String) -> void:
+	if value in ["menu","intro","ending","transition","confirm"]:
+		player.cancel_action()
+		player.dodge_time = 0
+		if value == "menu" and not player.asleep:
+			player.stand_pose()
 	mode = value
 	player.enabled = value == "play"
 	touch.active = value == "play"
@@ -368,6 +388,7 @@ func set_mode(value: String) -> void:
 	player.input_vector = Vector2.ZERO
 	hud.visible = value == "play"
 	cinematic.visible = value == "intro"
+	forest.focus_marker.visible = false
 	if value != "play":
 		player.sprinting = false
 		sprint_button.button_pressed = false
@@ -462,6 +483,7 @@ func show_pause() -> void:
 func resume_game() -> void:
 	clear_overlay()
 	set_mode("play")
+	refresh_hud()
 
 func show_about() -> void:
 	set_mode("about")
@@ -522,6 +544,11 @@ func show_settings(origin: String) -> void:
 	check.button_pressed = bool(State.settings.show_fps)
 	check.toggled.connect(func(value: bool): State.settings.show_fps = value; State.save_settings())
 	content.add_child(check)
+	var hints := CheckButton.new()
+	hints.text = "Dicas e destaque de interações"
+	hints.button_pressed = bool(State.settings.hints)
+	hints.toggled.connect(func(value: bool): State.settings.hints = value; State.save_settings(); refresh_hud())
+	content.add_child(hints)
 	content.add_child(label("ATUALIZAÇÕES PELO GITHUB",15,GREEN))
 	content.add_child(paragraph("Versão instalada: %s. O download vem da release pública deste jogo. O Android pede sua autorização para instalar a atualização." % ProjectSettings.get_setting("application/config/version"),16,MUTED))
 	update_label = paragraph(Updates.status_text,17)
@@ -608,6 +635,7 @@ func refresh_hud() -> void:
 	goal_label.text = "Investigue a fenda na montanha." if State.mountain_found else "Encontre o limite da floresta."
 	if State.completed:
 		goal_label.text = "Capítulo concluído · continue explorando."
+	guide_label.visible = bool(State.settings.hints) and State.marks.is_empty() and not State.mountain_found
 
 func toast(text_value: String, duration: float = 3.5) -> void:
 	toast_label.text = text_value
@@ -718,7 +746,7 @@ func process_game(delta: float) -> void:
 	player.camera_yaw = cam_yaw
 	player.sprinting = Input.is_action_pressed("sprint") or sprint_button.button_pressed
 	sprint_button.text = "ANDAR" if sprint_button.button_pressed else "CORRER"
-	dodge_button.disabled = player.dodge_cooldown > 0
+	dodge_button.disabled = player.dodge_cooldown > 0 or player.busy()
 	dodge_button.text = "%.1fs" % player.dodge_cooldown if player.dodge_cooldown > 0 else "ESQUIVAR"
 	update_camera(delta)
 	update_interaction()
@@ -749,7 +777,14 @@ func update_camera(delta: float) -> void:
 		desired = hit.position + (camera_target-hit.position).normalized()*0.35
 	if desired.distance_to(camera_target) < 0.4:
 		desired = camera_target + Vector3(0,1.5,0.3)
-	camera.position = camera.position.lerp(desired,1.0-exp(-delta*12))
+	var next_position := camera.position.lerp(desired,1.0-exp(-delta*12))
+	# Clipping only the desired endpoint is insufficient while orbiting: the
+	# smoothed camera can still pass through a trunk on its way there.
+	var sweep := PhysicsRayQueryParameters3D.create(camera_target,next_position,3,[player.get_rid()])
+	var obstruction := forest.get_world_3d().direct_space_state.intersect_ray(sweep)
+	if not obstruction.is_empty():
+		next_position = obstruction.position+(camera_target-obstruction.position).normalized()*0.35
+	camera.position = next_position
 	camera.look_at(camera_target)
 
 func discover_mountain() -> void:
@@ -763,6 +798,14 @@ func discover_mountain() -> void:
 	toast("A montanha. Qualquer caminho terminava aqui.  +40 XP",6)
 
 func update_interaction() -> void:
+	action_bar.visible = player.busy()
+	if player.busy():
+		action_bar.value = player.action_progress()*100
+		context_label.text = "Deixando uma marca na casca…" if player.action_kind == "tree" else "Soltando o mecanismo com cuidado…"
+		interact_button.visible = true
+		interact_button.disabled = true
+		interact_button.text = ("RISCANDO" if player.action_kind == "tree" else "DESARMANDO")+"  %d%%" % roundi(player.action_progress()*100)
+		return
 	interaction = {}
 	var pos := player.position
 	if State.mountain_found and pos.distance_to(forest.exit_position) < 3.2:
@@ -793,29 +836,37 @@ func update_interaction() -> void:
 		var texts := {"tree":"RISCAR ÁRVORE","echo":"LER MEMÓRIA","trap":"DESARMAR","rest":"DESCANSAR","exit":"INVESTIGAR"}
 		interact_button.text = texts[interaction.type] + (" · E" if not OS.has_feature("android") else "")
 		interact_button.disabled = interaction.type == "tree" and forest.trees[interaction.id].marked
+	update_focus_marker()
+
+func update_focus_marker() -> void:
+	forest.focus_marker.visible = false
+	if interaction.is_empty() or not bool(State.settings.hints):
+		return
+	var target := Vector3.ZERO
+	var marked := false
+	match interaction.type:
+		"tree":
+			target = forest.trees[interaction.id].position
+			marked = forest.trees[interaction.id].marked
+		"trap": target = forest.trap_positions[interaction.id]
+		"echo": target = forest.echo_positions[interaction.id]
+		"exit": target = forest.exit_position
+	forest.focus_at(target,interaction.type,marked)
 
 func interact() -> void:
-	if mode != "play" or interaction.is_empty():
+	if mode != "play" or interaction.is_empty() or player.busy():
 		return
 	match interaction.type:
 		"tree":
 			var id: int = interaction.id
 			if forest.trees[id].marked:
 				return
-			State.marks.append(id)
-			forest.mark_tree(id)
-			player.scratch(forest.trees[id].position)
-			Sound.play("scratch")
-			grant_xp(5)
-			toast("Marca deixada. Ela continuará aqui.  +5 XP")
+			if player.begin_action("tree",id,forest.trees[id].position):
+				Sound.play("scratch")
 		"trap":
 			var id: int = interaction.id
-			if not State.disarmed.has(id):
-				State.disarmed.append(id)
-				forest.disarm_trap(id)
+			if not State.disarmed.has(id) and player.begin_action("trap",id,forest.trap_positions[id]):
 				Sound.play("scratch")
-				grant_xp(12)
-				toast("Armadilha desarmada.  +12 XP")
 		"echo":
 			var id: int = interaction.id
 			if not State.echoes.has(id):
@@ -830,6 +881,31 @@ func interact() -> void:
 			toast("A clareira lhe devolve o fôlego. Vida recuperada.")
 		"exit":
 			finish_chapter()
+	snapshot()
+
+func finish_interaction(kind: String, id: int) -> void:
+	if mode != "play":
+		return
+	if kind == "tree" and id >= 0 and id < forest.trees.size():
+		var tree: Dictionary = forest.trees[id]
+		if State.marks.has(id) or player.position.distance_to(tree.position) > 1.8:
+			toast("Chegue um pouco mais perto para alcançar a casca.")
+			return
+		State.marks.append(id)
+		forest.mark_tree(id)
+		var contact: Vector3 = (player.position-tree.position).normalized()*0.4+Vector3.UP*1.25
+		forest.play_wood_chips(tree.position+contact)
+		grant_xp(5)
+		toast("Marca deixada. Ela continuará aqui.  +5 XP")
+	elif kind == "trap" and id >= 0 and id < forest.traps.size():
+		var distance := player.position.distance_to(forest.trap_positions[id])
+		if State.disarmed.has(id) or distance > 3.2 or distance < 1.05:
+			return
+		State.disarmed.append(id)
+		forest.disarm_trap(id)
+		grant_xp(12)
+		toast("Armadilha desarmada.  +12 XP")
+	refresh_hud()
 	snapshot()
 
 func dodge() -> void:
@@ -854,6 +930,7 @@ func update_hazards(delta: float) -> void:
 			return
 
 func damage(amount: int) -> void:
+	player.cancel_action()
 	State.health = maxi(0,State.health-amount)
 	State.changed.emit()
 	Sound.play("trap")

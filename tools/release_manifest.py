@@ -14,4 +14,6 @@ manifest = dict(version,
     package="online.b5solucoes.thelastlinea.preview", channel="preview")
 (root/"build/update.json").write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+"\n")
 (root/"build/SHA256SUMS.txt").write_text(f"{manifest['sha256']}  TheLastLinea.apk\n")
+notes = (root/"docs/RELEASE_NOTES.md").read_text()
+(root/"build/RELEASE_NOTES.md").write_text(notes+f"\n\nVersão Android: **{version['version']}** · build **{version['version_code']}**.\n")
 print("Created public update manifest and SHA-256 checksum.")

@@ -15,6 +15,13 @@ parser.add_argument("--sdk", default=os.environ.get("ANDROID_HOME", ""))
 parser.add_argument("--java", default=os.environ.get("JAVA_HOME", "/usr/lib/jvm/java-21-openjdk-amd64"))
 args = parser.parse_args()
 assert 0 < args.code < 2100000000
+metadata = json.loads((root/"version.json").read_text())
+base_version = metadata.get("source_version",metadata["version"])
+if not isinstance(base_version,str) or not re.fullmatch(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)",base_version):
+    raise SystemExit("version.json must contain a numeric major.minor.patch source version")
+chapter = metadata.get("chapter",1)
+if not isinstance(chapter,int) or isinstance(chapter,bool) or chapter < 1:
+    raise SystemExit("chapter must be a positive integer")
 templates = Path.home() / ".local/share/godot/export_templates/4.6.3.stable"
 if not (root / "android/build/build.gradle").exists():
     with zipfile.ZipFile(templates / "android_source.zip") as source:
@@ -37,7 +44,7 @@ build.mkdir(exist_ok=True)
 key = build / "preview.keystore"
 key.write_bytes(base64.b64decode((root/"tools/preview-signing.base64").read_text()))
 key.chmod(0o600)
-version = f"0.1.0-preview.{args.code}"
+version = f"{base_version}-preview.{args.code}"
 presets = (root/"export_presets.cfg").read_text()
 presets = re.sub(r'^keystore/(?:release|release_user|release_password)=.*\n', '', presets, flags=re.MULTILINE)
 presets = re.sub(r"version/code=\d+",f"version/code={args.code}",presets)
@@ -46,8 +53,11 @@ signing = (f'keystore/release={json.dumps(str(key))}\n'
            'keystore/release_user="androiddebugkey"\nkeystore/release_password="android"\n')
 presets = presets.replace('[preset.0.options]', '[preset.0.options]\n'+signing)
 (root/"export_presets.cfg").write_text(presets)
-(root/"version.json").write_text(json.dumps({"version":version,"version_code":args.code,"chapter":1}))
+(root/"version.json").write_text(json.dumps({"version":version,"source_version":base_version,"version_code":args.code,"chapter":chapter}))
 project = (root/"project.godot").read_text()
 project = re.sub(r'config/version="[^"]+"',f'config/version="{version}"',project)
 (root/"project.godot").write_text(project)
+if os.environ.get("GITHUB_ENV"):
+    with open(os.environ["GITHUB_ENV"],"a") as environment:
+        environment.write(f"GAME_VERSION={base_version}\n")
 print(f"Prepared Android preview {version} (arm64, API 24+).")

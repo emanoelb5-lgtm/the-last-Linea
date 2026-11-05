@@ -65,7 +65,18 @@ func _ready() -> void:
 	game.player.position = game.forest.trees[0].position+Vector3(0,0,1.6)
 	game.update_interaction()
 	verify(game.interaction.get("type") == "tree","nearby trees can be selected")
+	verify(game.forest.focus_marker.visible,"selected interaction has a visible world marker")
 	game.interact()
+	verify(game.player.busy() and State.marks.is_empty() and game.player.knife.visible,"tree cutting uses the visible knife before awarding its persistent mark")
+	game.interact()
+	await get_tree().create_timer(0.2).timeout
+	game.show_pause()
+	var frozen_action: float = game.player.scratch_time
+	await get_tree().create_timer(0.3).timeout
+	verify(is_equal_approx(game.player.scratch_time,frozen_action) and State.marks.is_empty(),"pause freezes an unfinished action without awarding XP")
+	game.resume_game()
+	await get_tree().create_timer(1.0).timeout
+	verify(not game.player.busy() and State.marks == [0],"resuming completes the cut and records exactly one mark")
 	var marked_xp: int = State.xp
 	game.update_interaction()
 	game.interact()
@@ -73,7 +84,15 @@ func _ready() -> void:
 	game.player.position = game.forest.trap_positions[0]+Vector3(0,0,2)
 	game.update_interaction()
 	game.interact()
+	verify(game.player.busy() and not State.disarmed.has(0),"disarming takes time and leaves the trap active until completed")
+	await get_tree().create_timer(1.2).timeout
 	verify(State.disarmed.has(0) and game.forest.traps[0].disarmed,"trap can be disarmed from its safe edge")
+	game.player.position = game.forest.trees[1].position+Vector3(0,0,1.7)
+	game.update_interaction()
+	game.interact()
+	game.damage(1)
+	verify(not game.player.busy() and not State.marks.has(1),"damage cancels an unfinished interaction without granting a mark")
+	State.health = 100
 	game.player.position = game.forest.trap_positions[1]
 	game.update_hazards(0)
 	verify(State.health == 72,"walking onto live spikes damages health")
@@ -116,6 +135,16 @@ func _ready() -> void:
 	game.update_interaction()
 	game.interact()
 	verify(State.health == 100,"resting in the clearing restores health")
+	var obstruction := LineaArt.collider(game.forest,Vector3(6,6,0.4),Vector3(0,3,3))
+	obstruction.collision_layer = 2
+	obstruction.collision_mask = 0
+	await get_tree().physics_frame
+	game.camera_target = Vector3(0,1.15,0)
+	game.camera.position = Vector3(0,5,8)
+	game.cam_yaw = 0
+	game.update_camera(0.005)
+	verify(game.camera.position.z < 2.8,"camera smoothing cannot leave the camera behind a blocking trunk")
+	obstruction.free()
 	game.snapshot()
 	var before_save := State.to_data().duplicate(true)
 	State.marks.clear()
@@ -136,6 +165,8 @@ func _ready() -> void:
 	verify(game.mode == "pause","settings returns to pause without restarting the chapter")
 	State.apply_data({"health":-3,"xp":-50,"marks":[0,0,-1,999,"bad"],"position":[10000,0,0]})
 	verify(State.health == 1 and State.xp == 0 and State.marks == [0] and State.last_position == Vector3.ZERO,"malformed save values are bounded and deduplicated")
+	State.apply_data({"schema":1,"health":64,"xp":135,"marks":[0,12],"echoes":[2],"disarmed":[0],"mountain_found":true,"mountain_angle":1.2,"intro_seen":true,"completed":false,"position":[2,0,-3]})
+	verify(State.health == 64 and State.xp == 135 and State.marks == [0,12] and State.echoes == [2] and State.disarmed == [0] and State.mountain_found and State.intro_seen and State.last_position == Vector3(2,0,-3),"version 0.1 progress remains compatible with the new interactions")
 	var url := Updates.DOWNLOAD_PREFIX + "v0.2.0/TheLastLinea.apk"
 	Updates.expected_asset_url = url
 	Updates.expected_size = 200000

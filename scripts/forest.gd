@@ -19,6 +19,8 @@ var sun: DirectionalLight3D
 var rng := RandomNumberGenerator.new()
 var mark_material: Material
 var spent_material: Material
+var focus_marker: MeshInstance3D
+var focus_material: ShaderMaterial
 
 func _ready() -> void:
 	rng.seed = 9827601
@@ -34,6 +36,7 @@ func _ready() -> void:
 	build_traps()
 	build_echoes()
 	build_clearing()
+	build_focus_marker()
 	if State.mountain_found:
 		place_exit(State.mountain_angle)
 	apply_quality()
@@ -360,3 +363,53 @@ func place_exit(angle: float) -> void:
 
 func apply_quality() -> void:
 	sun.shadow_enabled = int(State.settings.quality) > 0
+
+func build_focus_marker() -> void:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in 32:
+		if i%8 >= 5:
+			continue
+		var a := i*TAU/32.0
+		var b := (i+1)*TAU/32.0
+		var inner_a := Vector3(cos(a)*0.92,0,sin(a)*0.92)
+		var outer_a := Vector3(cos(a),0,sin(a))
+		var inner_b := Vector3(cos(b)*0.92,0,sin(b)*0.92)
+		var outer_b := Vector3(cos(b),0,sin(b))
+		for vertex in [inner_a,outer_a,inner_b,inner_b,outer_a,outer_b]:
+			st.set_normal(Vector3.UP)
+			st.add_vertex(vertex)
+	focus_marker = MeshInstance3D.new()
+	focus_marker.name = "InteractionFocus"
+	focus_marker.mesh = st.commit()
+	focus_material = ShaderMaterial.new()
+	focus_material.shader = load("res://shaders/focus.gdshader")
+	focus_marker.material_override = focus_material
+	focus_marker.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	focus_marker.visible = false
+	add_child(focus_marker)
+
+func focus_at(pos: Vector3, kind: String, already_marked: bool = false) -> void:
+	focus_marker.visible = true
+	focus_marker.position = Vector3(pos.x,0.09,pos.z)
+	var radius := 0.95 if kind == "tree" else (1.3 if kind == "trap" else 1.15)
+	focus_marker.scale = Vector3(radius,1,radius)
+	var color := Color("9cbea1")
+	if kind == "trap": color = Color("d6a86c")
+	elif already_marked: color = Color("b8ae87")
+	focus_material.set_shader_parameter("tint",color)
+
+func play_wood_chips(pos: Vector3) -> void:
+	var root := Node3D.new()
+	root.name = "BarkChips"
+	add_child(root)
+	root.position = pos
+	var chip_material := LineaArt.material(Color("baa17a"))
+	for i in 7:
+		var chip := LineaArt.box(root,Vector3(0.04,0.08,0.04),Vector3.ZERO,chip_material)
+		var angle := float(i)*TAU/7
+		var end := Vector3(cos(angle)*0.4,-0.75,sin(angle)*0.4)
+		var tween := root.create_tween().set_parallel(true)
+		tween.tween_property(chip,"position",end,0.45).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		tween.tween_property(chip,"scale",Vector3.ZERO,0.45)
+	root.create_tween().tween_callback(root.queue_free).set_delay(0.5)

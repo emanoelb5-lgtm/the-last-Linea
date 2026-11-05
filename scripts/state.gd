@@ -16,7 +16,7 @@ var completed: bool = false
 var intro_seen: bool = false
 var last_position := Vector3.ZERO
 var settings := {"master": 0.8, "ambience": 0.8, "effects": 0.9, "sensitivity": 1.0,
-	"quality": 1, "fps": 60, "show_fps": false, "touch_scale": 1.0}
+	"quality": 1, "fps": 60, "show_fps": false, "touch_scale": 1.0, "hints":true}
 var save_error := ""
 
 func _ready() -> void:

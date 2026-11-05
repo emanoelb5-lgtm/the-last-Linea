@@ -16,3 +16,4 @@ native-updater/build/
 .DS_Store
 .env
 local.properties
+__pycache__/
