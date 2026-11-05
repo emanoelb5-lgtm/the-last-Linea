@@ -60,6 +60,8 @@ jobs:
         run: sdkmanager 'platform-tools' 'platforms;android-36' 'build-tools;36.1.0' 'platforms;android-35'
       - name: Prepare preview version and stable TEST signing identity
         run: python3 tools/prepare_build.py --code "$((1000 + GITHUB_RUN_NUMBER))"
+      - name: Patch Android surface recovery
+        run: python3 tools/patch_android_gl.py --sdk "$ANDROID_HOME"
       - uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: ${{ github.event_name == 'pull_request' }}
@@ -78,6 +80,8 @@ jobs:
           godot --headless --path . --export-release Android build/TheLastLinea.apk 2>&1 | tee build/export.log
           python3 -c "from pathlib import Path; assert Path('build/TheLastLinea.apk').stat().st_size > 1000000"
           python3 tools/verify_apk.py --build-tools "$ANDROID_HOME/build-tools/36.1.0"
+      - name: Install image verification dependency
+        run: python3 -m pip install 'Pillow>=11,<13'
       - name: Enable accelerated Android test device
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules

@@ -6,6 +6,7 @@ import re
 import subprocess
 import time
 import xml.etree.ElementTree as ET
+from PIL import Image, ImageStat
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--apk', type=Path, required=True)
@@ -28,6 +29,19 @@ def screenshot(name):
     result = subprocess.run(['adb', 'exec-out', 'screencap', '-p'], capture_output=True, timeout=30)
     if result.returncode == 0:
         (args.output/name).write_bytes(result.stdout)
+
+
+def wait_for_picture(name, seconds=45):
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        alive()
+        screenshot(name)
+        picture = Image.open(args.output/name).convert('RGB')
+        # A live PID can still be stuck on a black EGL surface after resume.
+        if max(ImageStat.Stat(picture).stddev) > 5 and max(pair[1] for pair in picture.getextrema()) > 40:
+            return
+        time.sleep(2)
+    raise RuntimeError(f'Android surface stayed blank: {name}')
 
 
 def dismiss_system_tutorial():
@@ -106,18 +120,20 @@ try:
     if args.require_ready:
         wait_for('LINEA_BOOT_READY')
     dismiss_system_tutorial()
-    screenshot('01-menu.png')
+    wait_for_picture('01-menu.png')
     if args.exercise:
         logs = wait_for('LINEA_BUTTON NEW_GAME')
-        point = re.search(r'LINEA_BUTTON NEW_GAME (\d+) (\d+)', logs)
+        points = re.findall(r'LINEA_BUTTON NEW_GAME (\d+) (\d+)', logs)
+        point = points[-1] if points else None
         if not point:
             raise RuntimeError('The new-game button was not laid out')
-        adb('shell', 'input', 'tap', point[1], point[2])
+        adb('shell', 'input', 'tap', point[0], point[1])
         wait_for('LINEA_INTRO_READY')
         observe(4)
         screenshot('02-intro.png')
         wait_for('LINEA_PLAY_READY', 120)
-        screenshot('03-play.png')
+        observe(3)
+        wait_for_picture('03-play.png')
         # Exercise native touch delivery, movement and two sound effects.
         adb('shell', 'input', 'swipe', '128', '596', '128', '530', '1600')
         observe(3)
@@ -129,7 +145,16 @@ try:
         observe(5)
         if adb('shell', 'pidof', package).strip() != pid_before:
             raise RuntimeError('Returning from background restarted the app')
-        screenshot('05-resume.png')
+        wait_for_picture('05-resume.png')
+        logs = wait_for('LINEA_BUTTON RESUME_GAME')
+        points = re.findall(r'LINEA_BUTTON RESUME_GAME (\d+) (\d+)', logs)
+        point = points[-1] if points else None
+        if not point:
+            raise RuntimeError('The resume button was not laid out')
+        adb('shell', 'input', 'tap', point[0], point[1])
+        wait_for('LINEA_PLAY_RESUMED')
+        observe(3)
+        wait_for_picture('06-resumed-play.png')
     observe(args.seconds)
     screenshot('last-screen.png')
 except Exception as error:

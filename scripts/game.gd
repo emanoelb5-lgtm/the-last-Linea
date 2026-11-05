@@ -487,9 +487,13 @@ func finish_intro() -> void:
 	print("LINEA_PLAY_READY")
 
 func report_button_after_layout(control: Control, id: String) -> void:
-	await get_tree().process_frame
-	await get_tree().process_frame
-	if is_instance_valid(control):
+	var target: WeakRef = weakref(control)
+	control.resized.connect(func(): report_button(target,id))
+	report_button.call_deferred(target,id)
+
+func report_button(target: WeakRef, id: String) -> void:
+	var control: Control = target.get_ref()
+	if is_instance_valid(control) and control.size.x > 0 and control.size.y > 0:
 		var center := get_viewport().get_screen_transform()*control.get_global_rect().get_center()
 		print("LINEA_BUTTON %s %d %d" % [id,roundi(center.x),roundi(center.y)])
 
@@ -500,7 +504,9 @@ func show_pause() -> void:
 	set_mode("pause")
 	var box := shell("Um instante na névoa", "Seu progresso é salvo automaticamente neste aparelho.",570,485)
 	spacer(box)
-	box.add_child(button("Voltar à floresta",resume_game,true))
+	var resume := button("Voltar à floresta",resume_game,true)
+	box.add_child(resume)
+	report_button_after_layout(resume,"RESUME_GAME")
 	box.add_child(button("Caderno de memórias",func(): show_journal("pause")))
 	box.add_child(button("Configurações e atualizações",func(): show_settings("pause")))
 	box.add_child(button("Salvar e voltar ao início",func(): snapshot(); show_main_menu()))
@@ -509,6 +515,7 @@ func resume_game() -> void:
 	clear_overlay()
 	set_mode("play")
 	refresh_hud()
+	print("LINEA_PLAY_RESUMED")
 
 func show_about() -> void:
 	set_mode("about")
@@ -527,7 +534,7 @@ func show_licenses() -> void:
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	box.add_child(scroll)
-	var text_value := Engine.get_license_text()+"\n\n"
+	var text_value := Engine.get_license_text()+"\n\n"+FileAccess.get_file_as_string("res://licenses/android-surface.txt")+"\n\n"
 	for component in Engine.get_copyright_info():
 		text_value += str(component.get("name",""))+"\n"+JSON.stringify(component.get("parts",[]),"  ")+"\n\n"
 	text_value += JSON.stringify(Engine.get_license_info(),"  ")

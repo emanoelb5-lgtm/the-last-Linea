@@ -37,6 +37,8 @@ with zipfile.ZipFile(apk) as archive:
     libraries = [name for name in archive.namelist() if name.startswith("lib/") and name.endswith(".so")]
     assert any("libgodot_android.so" in name for name in libraries), "Godot native library is missing"
     assert all("/arm64-v8a/" in name for name in libraries), "APK should contain only ARM64 libraries"
+    assert any(b"LINEA_EGL_RECOVERED" in archive.read(name) for name in archive.namelist()
+               if re.fullmatch(r"classes\d*\.dex",name)), "Android EGL surface recovery patch is missing"
 report = (f"Android artifact verified: {version['version']}\n"
           f"Bytes: {apk.stat().st_size}\nSHA-256: {hashlib.sha256(apk.read_bytes()).hexdigest()}\n\n"
           + signature + "\n" + badging + "\n" + manifest)

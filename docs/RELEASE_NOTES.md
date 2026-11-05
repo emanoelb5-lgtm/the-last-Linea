@@ -8,6 +8,7 @@ Revisão de inicialização e do personagem do capítulo I para Android 64 bits 
 - Áudio original pré-processado em Ogg: a abertura deixa de sintetizar centenas de milhares de amostras PCM no celular. O ambiente começa depois do primeiro quadro renderizado.
 - A superfície 3D recebe uma resolução válida antes de entrar na cena, inclusive enquanto o Android ainda informa dimensões nulas. Faixas de resolução e qualidade são limitadas.
 - Correção do cálculo da vinheta para evitar comportamento indefinido entre drivers gráficos.
+- Recuperação da superfície OpenGL ao voltar do segundo plano, preservando o contexto gráfico, as texturas e o cenário. O teste também verifica se a imagem reaparece e se é possível voltar à exploração.
 - O Actions passa a instalar e abrir o APK ARM64 em Android 15 antes da publicação, cobrindo menu, abertura do capítulo, toque e retorno do segundo plano. Logs e capturas acompanham os artefatos.
 
 Vida, XP, marcas, memórias, armadilhas e progresso do capítulo continuam no mesmo formato de salvamento. A assinatura e a identificação do aplicativo permanecem compatíveis com as versões anteriores desta prévia.
