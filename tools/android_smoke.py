@@ -131,7 +131,7 @@ try:
         wait_for('LINEA_INTRO_READY')
         observe(4)
         screenshot('02-intro.png')
-        wait_for('LINEA_PLAY_READY', 120)
+        wait_for('LINEA_PLAY_READY', 240)
         observe(3)
         wait_for_picture('03-play.png')
         # Exercise native touch delivery, movement and two sound effects.

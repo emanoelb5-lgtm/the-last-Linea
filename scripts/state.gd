@@ -4,7 +4,7 @@ signal changed
 const SAVE_PATH := "user://chapter_1.json"
 const SETTINGS_PATH := "user://settings.cfg"
 const SCHEMA := 1
-const MAP_LIMIT := 73.0
+const MAP_LIMIT := LineaWorldRules.MAP_LIMIT
 var health: int = 100
 var xp: int = 0
 var marks: Array[int] = []
@@ -82,7 +82,7 @@ func load_game() -> void:
 func apply_data(data: Dictionary) -> void:
 	health = clampi(int(data.get("health", 100)), 1, 100)
 	xp = clampi(int(data.get("xp", 0)), 0, 100000)
-	marks = valid_ids(data.get("marks", []), 239)
+	marks = valid_ids(data.get("marks", []), LineaWorldRules.MAX_TREE_ID)
 	echoes = valid_ids(data.get("echoes", []), 2)
 	disarmed = valid_ids(data.get("disarmed", []), 13)
 	mountain_found = bool(data.get("mountain_found", false))
@@ -100,11 +100,13 @@ func apply_data(data: Dictionary) -> void:
 
 func valid_ids(value: Variant, maximum: int) -> Array[int]:
 	var result: Array[int] = []
+	var seen: Dictionary = {}
 	if value is Array:
 		for item in value:
 			if (item is int or item is float) and float(item) == int(item):
 				var id := int(item)
-				if id >= 0 and id <= maximum and not result.has(id):
+				if id >= 0 and id <= maximum and not seen.has(id):
+					seen[id] = true
 					result.append(id)
 	return result
 

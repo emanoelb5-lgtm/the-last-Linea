@@ -1,6 +1,6 @@
 class_name LineaHumanoid
 extends RefCounted
-## An adult human silhouette built from tapered anatomical volumes, not voxels.
+## A young adult human silhouette built from tapered anatomical volumes, not voxels.
 ## Pixel detail comes from the fabric shader and the game's low-res viewport.
 
 static func material(color: Color, glow: float = 0.0) -> StandardMaterial3D:
@@ -72,19 +72,20 @@ static func tube(parent: Node3D, start: Vector3, finish: Vector3, radius: float,
 
 static func create(parent: Node3D) -> Dictionary:
 	var rig := Node3D.new()
-	rig.name = "HumanTraveler"
+	rig.name = "YoungTraveler"
+	rig.scale = Vector3.ONE*0.96
 	parent.add_child(rig)
-	var coat := fabric(Color("3b4c50"))
-	var trousers := fabric(Color("4e5754"))
-	var skin := material(Color("bb9378"))
+	var coat := fabric(Color("344f51"))
+	var trousers := fabric(Color("535b59"))
+	var skin := material(Color("c7a080"))
 	var leather := material(Color("5f4938"))
 	var boots := material(Color("29312f"))
 	var hair := material(Color("332c27"))
 	var scarf := fabric(Color("9b5d43"))
 	var steel := material(Color("b8c7c3"),0.1)
 	# Pelvis, tapered waist, ribcage and sloping shoulder line.
-	mesh(rig,volume([Vector3(0.87,0.12,0.09),Vector3(0.94,0.175,0.125),Vector3(1.06,0.17,0.12)]),Vector3.ZERO,trousers)
-	mesh(rig,volume([Vector3(0.95,0.175,0.13),Vector3(1.08,0.155,0.115),Vector3(1.25,0.195,0.125),Vector3(1.38,0.225,0.12),Vector3(1.46,0.13,0.085)]),Vector3.ZERO,coat)
+	var pelvis := mesh(rig,volume([Vector3(0.87,0.12,0.09),Vector3(0.94,0.175,0.125),Vector3(1.06,0.17,0.12)]),Vector3.ZERO,trousers)
+	mesh(rig,volume([Vector3(0.95,0.175,0.13),Vector3(1.08,0.155,0.115),Vector3(1.25,0.195,0.125),Vector3(1.38,0.205,0.12),Vector3(1.46,0.13,0.085)]),Vector3.ZERO,coat)
 	mesh(rig,volume([Vector3(1.015,0.174,0.127),Vector3(1.055,0.171,0.125)]),Vector3.ZERO,leather)
 	tube(rig,Vector3(0,1.07,-0.126),Vector3(0,1.39,-0.126),0.008,boots)
 	for side in [-1.0,1.0]:
@@ -97,18 +98,20 @@ static func create(parent: Node3D) -> Dictionary:
 	head.name = "Head"
 	rig.add_child(head)
 	head.position = Vector3(0,1.635,0)
-	head.scale = Vector3(1,0.85,1)
-	mesh(head,volume([Vector3(-0.14,0.025,0.035),Vector3(-0.115,0.063,0.073),Vector3(-0.055,0.092,0.1),Vector3(0.035,0.105,0.106),Vector3(0.1,0.097,0.09),Vector3(0.145,0.035,0.04)]),Vector3.ZERO,skin)
+	head.scale = Vector3(1.035,0.94,1.0)
+	mesh(head,volume([Vector3(-0.13,0.036,0.04),Vector3(-0.105,0.066,0.074),Vector3(-0.045,0.094,0.1),Vector3(0.035,0.105,0.106),Vector3(0.1,0.097,0.09),Vector3(0.145,0.035,0.04)]),Vector3.ZERO,skin)
 	mesh(head,volume([Vector3(0.075,0.104,0.099),Vector3(0.12,0.099,0.094),Vector3(0.16,0.06,0.055),Vector3(0.165,0.002,0.002)]),Vector3.ZERO,hair)
 	oval(head,Vector3(0.19,0.15,0.07),Vector3(0,0.035,0.081),hair)
 	for side in [-1.0,1.0]:
 		oval(head,Vector3(0.042,0.071,0.042),Vector3(side*0.106,-0.005,0),skin,8)
-		oval(head,Vector3(0.038,0.018,0.012),Vector3(side*0.044,0.026,-0.101),material(Color("e0d3bc")),8)
-		oval(head,Vector3(0.012,0.014,0.008),Vector3(side*0.043,0.026,-0.108),boots,8)
-		tube(head,Vector3(side*0.025,0.052,-0.102),Vector3(side*0.066,0.054,-0.095),0.007,hair)
-	oval(head,Vector3(0.035,0.07,0.047),Vector3(0,-0.013,-0.112),skin,8)
-	oval(head,Vector3(0.09,0.05,0.05),Vector3(0,-0.085,-0.071),fabric(Color("6c5141")),10)
-	tube(head,Vector3(-0.022,-0.055,-0.102),Vector3(0.022,-0.055,-0.102),0.004,leather)
+		oval(head,Vector3(0.038,0.018,0.012),Vector3(side*0.044,0.022,-0.101),material(Color("e0d3bc")),8)
+		oval(head,Vector3(0.012,0.014,0.008),Vector3(side*0.043,0.022,-0.108),boots,8)
+		tube(head,Vector3(side*0.025,0.052,-0.102),Vector3(side*0.066,0.054,-0.095),0.005,hair)
+	oval(head,Vector3(0.029,0.048,0.036),Vector3(0,-0.012,-0.112),skin,8)
+	var mouth := oval(head,Vector3(0.038,0.009,0.01),Vector3(0,-0.056,-0.104),material(Color("694d40")),8)
+	for i in 5:
+		var lock := oval(head,Vector3(0.052,0.095,0.045),Vector3(-0.077+i*0.036,0.085-0.008*(i%2),-0.077),hair,8)
+		lock.rotation.z = -0.38+i*0.09
 	# A wrapped scarf and a narrow hanging cloth, not a rectangular torso.
 	mesh(rig,volume([Vector3(1.45,0.08,0.075),Vector3(1.5,0.09,0.085),Vector3(1.54,0.065,0.065)]),Vector3.ZERO,scarf)
 	var cloth := mesh(rig,volume([Vector3(1.14,0.035,0.014),Vector3(1.27,0.043,0.019),Vector3(1.47,0.035,0.022)],6),Vector3(-0.065,0,-0.135),scarf)
@@ -116,6 +119,7 @@ static func create(parent: Node3D) -> Dictionary:
 	# Thigh/knee/calf and upper-arm/elbow/forearm are independently articulated.
 	var limbs: Array[Node3D] = []
 	var joints: Array[Node3D] = []
+	var feet: Array[Node3D] = []
 	for i in 4:
 		var side := -1.0 if i%2 == 0 else 1.0
 		var pivot := Node3D.new()
@@ -130,11 +134,16 @@ static func create(parent: Node3D) -> Dictionary:
 			mesh(pivot,volume([Vector3(-0.425,0.067,0.072),Vector3(-0.23,0.087,0.09),Vector3(0,0.089,0.095)]),Vector3.ZERO,trousers)
 			oval(pivot,Vector3(0.14,0.14,0.14),Vector3(0,-0.4,0),trousers,10)
 			mesh(joint,volume([Vector3(-0.36,0.048,0.052),Vector3(-0.18,0.063,0.068),Vector3(0,0.064,0.07)]),Vector3.ZERO,trousers)
-			oval(joint,Vector3(0.13,0.17,0.245),Vector3(0,-0.435,-0.045),boots,10)
-			mesh(joint,volume([Vector3(-0.4,0.058,0.061),Vector3(-0.23,0.057,0.06)]),Vector3.ZERO,boots)
+			var ankle := Node3D.new()
+			ankle.name = "Ankle"
+			joint.add_child(ankle)
+			ankle.position.y = -0.425
+			oval(ankle,Vector3(0.13,0.17,0.245),Vector3(0,-0.015,-0.045),boots,10)
+			mesh(ankle,volume([Vector3(0.02,0.058,0.061),Vector3(0.20,0.057,0.06)]),Vector3.ZERO,boots)
+			feet.append(ankle)
 		else:
 			pivot.name = "LeftShoulder" if i == 2 else "RightShoulder"
-			pivot.position = Vector3(side*0.228,1.385,0)
+			pivot.position = Vector3(side*0.214,1.385,0)
 			joint.name = "Elbow"
 			joint.position.y = -0.335
 			oval(pivot,Vector3(0.16,0.19,0.18),Vector3(0,-0.045,0),coat)
@@ -173,4 +182,12 @@ static func create(parent: Node3D) -> Dictionary:
 	light.omni_range = 5.5
 	light.omni_attenuation = 1.6
 	lantern.add_child(light)
-	return {"rig":rig,"limbs":limbs,"joints":joints,"head":head,"light":light,"knife":knife}
+	# A pelvis hinge lets the chest lean independently of planted legs.
+	var upper := Node3D.new()
+	upper.name = "ChestPivot"
+	rig.add_child(upper)
+	upper.position.y = 0.955
+	for child in rig.get_children():
+		if child not in [upper,pelvis,limbs[0],limbs[1]]:
+			child.reparent(upper,true)
+	return {"rig":rig,"limbs":limbs,"joints":joints,"feet":feet,"upper":upper,"head":head,"mouth":mouth,"light":light,"knife":knife,"lantern":lantern}

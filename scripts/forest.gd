@@ -1,19 +1,31 @@
 class_name LineaForest
 extends Node3D
-const TREE_COUNT := 240
-const MOUNTAIN_RADIUS := 57.0
-const EXIT_RADIUS := 66.0
-var trees: Array[Dictionary] = []
+const TREE_COUNT := LineaWorldRules.MAX_TREE_ID+1
+const MOUNTAIN_RADIUS := LineaWorldRules.MOUNTAIN_RADIUS
+const CHUNK_SIZE := LineaWorldRules.CHUNK_SIZE
+var trees: Dictionary = {}
+var chunks: Dictionary = {}
+var collision_trees: Dictionary = {}
+var legacy_positions: Array[Vector3] = []
+var marked_ids: Dictionary = {}
+var chunk_center := Vector2i(99999,99999)
+var collision_center := Vector3(99999,0,99999)
+var tree_meshes: Array[Mesh] = []
+var distant_meshes: Array[Mesh] = []
+var bark: Material
+var grass_material: Material
+var grass_geometry: Mesh
+var rock_material: Material
+var rock_geometry: Mesh
+var mist_material: Material
 var doors: Array[Node3D] = []
 var traps: Array[Dictionary] = []
 var echo_nodes: Array[Node3D] = []
-var echo_positions: Array[Vector3] = [Vector3(-19,0,-27), Vector3(29,0,19), Vector3(-26,0,30)]
-var door_positions: Array[Vector3] = [Vector3(-12,0,-15), Vector3(17,0,8), Vector3(-21,0,21), Vector3(10,0,-39)]
-var trap_positions: Array[Vector3] = [Vector3(5,0,-8), Vector3(-8,0,-7), Vector3(12,0,17), Vector3(-15,0,7),
-	Vector3(20,0,-23), Vector3(-28,0,-14), Vector3(33,0,8), Vector3(-7,0,31), Vector3(9,0,42),
-	Vector3(-37,0,17), Vector3(35,0,-35), Vector3(-16,0,-42), Vector3(43,0,30), Vector3(-40,0,-34)]
-var exit_node: Node3D
-var exit_position := Vector3.ZERO
+var echo_positions: Array[Vector3] = [Vector3(-82,0,-105),Vector3(235,0,192),Vector3(-390,0,438)]
+var door_positions: Array[Vector3] = [Vector3(-312,0,-310),Vector3(432,0,158),Vector3(-385,0,365),Vector3(180,0,-603)]
+var trap_positions: Array[Vector3] = [Vector3(104,0,-249),Vector3(-248,0,-145),Vector3(215,0,201),Vector3(-282,0,108),
+    Vector3(319,0,-262),Vector3(-387,0,-214),Vector3(461,0,122),Vector3(-126,0,465),Vector3(208,0,538),
+    Vector3(-533,0,208),Vector3(472,0,-447),Vector3(-227,0,-610),Vector3(535,0,405),Vector3(-554,0,-401)]
 var environment: Environment
 var sun: DirectionalLight3D
 var rng := RandomNumberGenerator.new()
@@ -29,16 +41,13 @@ func _ready() -> void:
 	build_environment()
 	build_ground()
 	build_mountains()
-	build_trees()
-	build_scatter()
-	build_mist()
+	prepare_forest()
 	build_doors()
 	build_traps()
 	build_echoes()
 	build_clearing()
 	build_focus_marker()
-	if State.mountain_found:
-		place_exit(State.mountain_angle)
+	update_streaming(Vector3.ZERO,true)
 	apply_quality()
 
 func build_environment() -> void:
@@ -52,7 +61,7 @@ func build_environment() -> void:
 	environment.fog_enabled = true
 	environment.fog_light_color = Color("4b6062")
 	environment.fog_light_energy = 0.68
-	environment.fog_density = 0.019
+	environment.fog_density = 0.032
 	environment.fog_sky_affect = 1.0
 	var env := WorldEnvironment.new()
 	env.environment = environment
@@ -68,27 +77,27 @@ func build_environment() -> void:
 func build_ground() -> void:
 	var ground := MeshInstance3D.new()
 	var plane := PlaneMesh.new()
-	plane.size = Vector2(220, 220)
+	plane.size = Vector2(1800,1800)
 	ground.mesh = plane
 	var mat := ShaderMaterial.new()
 	mat.shader = load("res://shaders/ground.gdshader")
 	ground.material_override = mat
 	add_child(ground)
-	LineaArt.collider(self, Vector3(220, 0.5, 220), Vector3(0,-0.25,0))
+	LineaArt.collider(self, Vector3(1800,0.5,1800), Vector3(0,-0.25,0))
 
 func build_mountains() -> void:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var count := 64
+	var count := 128
 	for i in count:
 		var a := float(i) * TAU / count
 		var b := float(i + 1) * TAU / count
-		var h1 := 19.0 + 13.0 * absf(sin(i * 2.41))
-		var h2 := 19.0 + 13.0 * absf(sin((i + 1) * 2.41))
-		var inner_a := Vector3(sin(a)*74, -0.1, cos(a)*74)
-		var inner_b := Vector3(sin(b)*74, -0.1, cos(b)*74)
-		var peak_a := Vector3(sin(a)*89, h1, cos(a)*89)
-		var peak_b := Vector3(sin(b)*89, h2, cos(b)*89)
+		var h1 := 105.0+65.0*absf(sin(i*0.73))
+		var h2 := 105.0+65.0*absf(sin((i+1)*0.73))
+		var inner_a := Vector3(sin(a)*MOUNTAIN_RADIUS, -0.1, cos(a)*MOUNTAIN_RADIUS)
+		var inner_b := Vector3(sin(b)*MOUNTAIN_RADIUS, -0.1, cos(b)*MOUNTAIN_RADIUS)
+		var peak_a := Vector3(sin(a)*880, h1, cos(a)*880)
+		var peak_b := Vector3(sin(b)*880, h2, cos(b)*880)
 		for vertex in [inner_a, peak_a, inner_b, inner_b, peak_a, peak_b]:
 			st.set_color(Color("4b5756").darkened(rng.randf_range(0, 0.15)))
 			st.add_vertex(vertex)
@@ -100,139 +109,249 @@ func build_mountains() -> void:
 	rock.cull_mode = BaseMaterial3D.CULL_DISABLED
 	mountains.material_override = rock
 	add_child(mountains)
-	for i in 40:
-		var a := float(i) * TAU / 40
-		var body := LineaArt.collider(self, Vector3(13,30,5), Vector3(sin(a)*77,10,cos(a)*77))
+	for i in 64:
+		var a := i*TAU/64.0
+		var body := LineaArt.collider(self,Vector3(79,160,8),Vector3(sin(a)*783,75,cos(a)*783))
 		body.rotation.y = a
 
-func reserved(pos: Vector3) -> bool:
-	if pos.length() < 5.0:
-		return true
-	for p in door_positions + echo_positions + trap_positions:
-		if pos.distance_to(p) < 4.0:
-			return true
-	return false
-
-func build_trees() -> void:
-	var positions: Array[Vector3] = [Vector3(3.3,0,-1.8), Vector3(-3.8,0,3.3), Vector3(4.3,0,4.5)]
-	var attempts := 0
-	while positions.size() < TREE_COUNT and attempts < 20000:
-		attempts += 1
-		var pos := Vector3(rng.randf_range(-68,68),0,rng.randf_range(-68,68))
-		if pos.length() > 69 or reserved(pos):
+func prepare_forest() -> void:
+	# Keep all original tree positions and IDs, so existing marks stay in place.
+	var legacy_rng := RandomNumberGenerator.new()
+	legacy_rng.seed = 9827601
+	for _i in 384:
+		legacy_rng.randf_range(0,0.15)
+	legacy_positions.assign([Vector3(3.3,0,-1.8),Vector3(-3.8,0,3.3),Vector3(4.3,0,4.5)])
+	var old_reserved: Array[Vector3] = [Vector3(-19,0,-27),Vector3(29,0,19),Vector3(-26,0,30),
+		Vector3(-12,0,-15),Vector3(17,0,8),Vector3(-21,0,21),Vector3(10,0,-39),
+		Vector3(5,0,-8),Vector3(-8,0,-7),Vector3(12,0,17),Vector3(-15,0,7),Vector3(20,0,-23),
+		Vector3(-28,0,-14),Vector3(33,0,8),Vector3(-7,0,31),Vector3(9,0,42),Vector3(-37,0,17),
+		Vector3(35,0,-35),Vector3(-16,0,-42),Vector3(43,0,30),Vector3(-40,0,-34)]
+	while legacy_positions.size() < LineaWorldRules.LEGACY_TREE_COUNT:
+		var pos := Vector3(legacy_rng.randf_range(-68,68),0,legacy_rng.randf_range(-68,68))
+		if pos.length() > 69 or pos.length() < 5:
 			continue
 		var clear := true
-		for other in positions:
-			if pos.distance_to(other) < 3.8:
+		for other in old_reserved:
+			if pos.distance_to(other) < 4.0:
 				clear = false
 				break
 		if clear:
-			positions.append(pos)
-	var bark := ShaderMaterial.new()
-	bark.shader = load("res://shaders/bark.gdshader")
-	for variant in 6:
-		var mm := MultiMesh.new()
-		mm.transform_format = MultiMesh.TRANSFORM_3D
-		mm.mesh = LineaArt.tree_mesh(45 + variant * 19)
-		mm.instance_count = 40
-		var instance := MultiMeshInstance3D.new()
-		instance.multimesh = mm
-		instance.material_override = bark
-		add_child(instance)
-		for j in 40:
-			var id := variant * 40 + j
-			var pos := positions[id]
-			var rotation_y := rng.randf_range(0, TAU)
-			var scale_value := rng.randf_range(0.9, 1.3)
-			mm.set_instance_transform(j, Transform3D(Basis(Vector3.UP, rotation_y).scaled(Vector3.ONE * scale_value), pos))
-			var body := StaticBody3D.new()
-			var cs := CollisionShape3D.new()
-			var shape := CylinderShape3D.new()
-			shape.radius = 0.4
-			shape.height = 5
-			cs.shape = shape
-			cs.position.y = 2.5
-			body.add_child(cs)
-			add_child(body)
-			body.position = pos
-			# A separate camera layer covers upper branches without making the
-			# player collide with empty air around a tree's base.
-			var camera_body := StaticBody3D.new()
-			camera_body.collision_layer = 2
-			camera_body.collision_mask = 0
-			var camera_shape := CollisionShape3D.new()
-			var camera_volume := CylinderShape3D.new()
-			camera_volume.radius = 1.25
-			camera_volume.height = 11.0
-			camera_shape.shape = camera_volume
-			camera_shape.position.y = 5.5
-			camera_body.add_child(camera_shape)
-			add_child(camera_body)
-			camera_body.position = pos
-			trees.append({"id": id, "position": pos, "marked": false})
+			for other in legacy_positions:
+				if pos.distance_to(other) < 3.8:
+					clear = false
+					break
+		if clear:
+			legacy_positions.append(pos)
 	for id in State.marks:
-		mark_tree(id)
-
-func mark_tree(id: int) -> void:
-	if id < 0 or id >= trees.size() or trees[id].marked:
-		return
-	trees[id].marked = true
-	var root := Node3D.new()
-	add_child(root)
-	root.position = trees[id].position
-	for side in 4:
-		var holder := Node3D.new()
-		root.add_child(holder)
-		holder.rotation.y = side * PI / 2
-		for angle in [-0.65, 0.65]:
-			var cut := LineaArt.box(holder, Vector3(0.045,0.42,0.045), Vector3(0,1.28,0.37), mark_material)
-			cut.rotation.z = angle
-
-func build_scatter() -> void:
-	var grass := MultiMesh.new()
-	grass.transform_format = MultiMesh.TRANSFORM_3D
-	grass.mesh = LineaArt.grass_mesh()
-	grass.instance_count = 1400
-	var gi := MultiMeshInstance3D.new()
-	gi.multimesh = grass
-	var gm := LineaArt.material(Color("626650"))
-	gm.cull_mode = BaseMaterial3D.CULL_DISABLED
-	gi.material_override = gm
-	add_child(gi)
-	for i in 1400:
-		var a := rng.randf_range(0,TAU)
-		var r := sqrt(rng.randf()) * 70
-		var scale_value := rng.randf_range(0.4,1.0)
-		grass.set_instance_transform(i, Transform3D(Basis(Vector3.UP,a).scaled(Vector3.ONE*scale_value),Vector3(sin(a)*r,0,cos(a)*r)))
-	var rocks := MultiMesh.new()
-	rocks.transform_format = MultiMesh.TRANSFORM_3D
+		marked_ids[id] = true
+	bark = ShaderMaterial.new()
+	bark.shader = load("res://shaders/bark.gdshader")
+	for i in 6:
+		tree_meshes.append(LineaArt.tree_mesh(45+i*19))
+		var st := SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		LineaArt.limb(st,Vector3.ZERO,Vector3(0.12,6.5,0),0.32,0.055)
+		LineaArt.limb(st,Vector3(0,3.8,0),Vector3(1.7,5.6,0.5),0.11,0.015)
+		LineaArt.limb(st,Vector3(0,4.8,0),Vector3(-1.3,6.5,-0.5),0.09,0.01)
+		distant_meshes.append(st.commit())
+	grass_geometry = LineaArt.grass_mesh()
+	grass_material = LineaArt.material(Color("626650"))
+	grass_material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	var stone := SphereMesh.new()
 	stone.radial_segments = 5
 	stone.rings = 2
 	stone.radius = 0.7
-	stone.height = 1.0
-	rocks.mesh = stone
-	rocks.instance_count = 90
-	var ri := MultiMeshInstance3D.new()
-	ri.multimesh = rocks
-	ri.material_override = LineaArt.material(Color("444e4c"))
-	add_child(ri)
-	for i in 90:
-		var pos := Vector3(rng.randf_range(-68,68),0.15,rng.randf_range(-68,68))
-		rocks.set_instance_transform(i,Transform3D(Basis(Vector3.UP,rng.randf_range(0,TAU)).scaled(Vector3(rng.randf_range(0.4,1.4),0.6,rng.randf_range(0.5,1.3))),pos))
+	stone.height = 1
+	rock_geometry = stone
+	rock_material = LineaArt.material(Color("444e4c"))
+	mist_material = ShaderMaterial.new()
+	mist_material.shader = load("res://shaders/mist.gdshader")
 
-func build_mist() -> void:
-	var fog := ShaderMaterial.new()
-	fog.shader = load("res://shaders/mist.gdshader")
-	for i in 22:
+static func chunk_key(pos: Vector3) -> Vector2i:
+	return Vector2i(floori(pos.x/CHUNK_SIZE),floori(pos.z/CHUNK_SIZE))
+
+func tree_data(id: int) -> Dictionary:
+	if id < 0 or id > LineaWorldRules.MAX_TREE_ID:
+		return {}
+	if trees.has(id):
+		return trees[id]
+	var pos: Vector3
+	if id < LineaWorldRules.LEGACY_TREE_COUNT:
+		pos = legacy_positions[id]
+	else:
+		var n := id-LineaWorldRules.LEGACY_TREE_COUNT
+		var cell := Vector2i(n/LineaWorldRules.GRID_WIDTH-LineaWorldRules.GRID_HALF,n%LineaWorldRules.GRID_WIDTH-LineaWorldRules.GRID_HALF)
+		var seeded := RandomNumberGenerator.new()
+		seeded.seed = 9827601+id*7919
+		pos = Vector3(cell.x*8+4+seeded.randf_range(-2.0,2.0),0,cell.y*8+4+seeded.randf_range(-2.0,2.0))
+		if pos.length() < 90 or pos.length() > MOUNTAIN_RADIUS-5:
+			return {}
+		for landmark in door_positions+trap_positions+echo_positions:
+			if pos.distance_to(landmark) < 4:
+				return {}
+	return {"id":id,"position":pos,"marked":marked_ids.has(id)}
+
+func chunk_tree_ids(key: Vector2i) -> Array[int]:
+	var ids: Array[int] = []
+	for id in legacy_positions.size():
+		if chunk_key(legacy_positions[id]) == key:
+			ids.append(id)
+	for x in range(key.x*6,key.x*6+6):
+		for z in range(key.y*6,key.y*6+6):
+			if absi(x)>100 or absi(z)>100:
+				continue
+			var id := 240+(x+100)*201+(z+100)
+			if not tree_data(id).is_empty():
+				ids.append(id)
+	return ids
+
+func add_multimesh(parent: Node3D, geometry: Mesh, mat: Material, transforms: Array[Transform3D], shadows: bool = false) -> MultiMeshInstance3D:
+	var node := MultiMeshInstance3D.new()
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.mesh = geometry
+	mm.instance_count = transforms.size()
+	for i in transforms.size():
+		mm.set_instance_transform(i,transforms[i])
+	node.multimesh = mm
+	node.material_override = mat
+	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if shadows else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(node)
+	return node
+
+func load_chunk(key: Vector2i) -> void:
+	var root := Node3D.new()
+	root.name = "Forest_%d_%d" % [key.x,key.y]
+	add_child(root)
+	var ids := chunk_tree_ids(key)
+	var transforms: Array[Transform3D] = []
+	var random := RandomNumberGenerator.new()
+	random.seed = 9827601+key.x*7307+key.y*7919
+	for id in ids:
+		var data := tree_data(id)
+		trees[id] = data
+		var basis := Basis(Vector3.UP,random.randf_range(0,TAU)).scaled(Vector3.ONE*random.randf_range(0.9,1.3))
+		transforms.append(Transform3D(basis,data.position))
+	var variant := posmod(key.x*13+key.y*7,6)
+	var instance := add_multimesh(root,tree_meshes[variant],bark,transforms,true)
+	chunks[key] = {"node":root,"ids":ids,"mesh":instance,"variant":variant,"lod":false}
+	for id in ids:
+		if marked_ids.has(id):
+			build_mark(id,root)
+	var blades: Array[Transform3D] = []
+	var rocks: Array[Transform3D] = []
+	for i in 115:
+		var pos := Vector3(key.x*48+random.randf_range(0,48),0,key.y*48+random.randf_range(0,48))
+		if pos.length() < 4.5: continue
+		var scale_value := random.randf_range(0.4,1)
+		blades.append(Transform3D(Basis(Vector3.UP,random.randf_range(0,TAU)).scaled(Vector3.ONE*scale_value),pos))
+		if i < 7:
+			rocks.append(Transform3D(Basis(Vector3.UP,random.randf_range(0,TAU)).scaled(Vector3(0.8,0.5,1.1)),pos))
+	add_multimesh(root,grass_geometry,grass_material,blades)
+	add_multimesh(root,rock_geometry,rock_material,rocks)
+	for i in 2:
 		var plane := MeshInstance3D.new()
 		var mesh := PlaneMesh.new()
-		mesh.size = Vector2(rng.randf_range(14,24),rng.randf_range(6,12))
+		mesh.size = Vector2(23,12)
 		plane.mesh = mesh
-		plane.material_override = fog
+		plane.material_override = mist_material
 		plane.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		add_child(plane)
-		plane.position = Vector3(rng.randf_range(-55,55),rng.randf_range(0.3,0.9),rng.randf_range(-55,55))
+		root.add_child(plane)
+		plane.position = Vector3(key.x*48+random.randf_range(2,46),random.randf_range(0.25,0.7),key.y*48+random.randf_range(2,46))
+
+func update_streaming(pos: Vector3, force: bool = false) -> void:
+	var center := chunk_key(pos)
+	if force or center != chunk_center:
+		chunk_center = center
+		var wanted: Dictionary = {}
+		for x in range(center.x-2,center.x+3):
+			for z in range(center.y-2,center.y+3):
+				var key := Vector2i(x,z)
+				wanted[key] = true
+				if not chunks.has(key):
+					load_chunk(key)
+		for key in chunks.keys():
+			if not wanted.has(key):
+				for id in chunks[key].ids:
+					trees.erase(id)
+				chunks[key].node.queue_free()
+				chunks.erase(key)
+			else:
+				var data: Dictionary = chunks[key]
+				var far := absi(key.x-center.x)>1 or absi(key.y-center.y)>1
+				data.mesh.multimesh.mesh = distant_meshes[data.variant] if far else tree_meshes[data.variant]
+				data.mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if far else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+				data.lod = far
+	if force or pos.distance_to(collision_center) > 12:
+		collision_center = pos
+		var wanted_bodies: Dictionary = {}
+		for data in nearby_trees(pos,38):
+			wanted_bodies[data.id] = true
+			if not collision_trees.has(data.id):
+				var body := StaticBody3D.new()
+				var cs := CollisionShape3D.new()
+				var shape := CylinderShape3D.new()
+				shape.radius = 0.4
+				shape.height = 5
+				cs.shape = shape
+				cs.position.y = 2.5
+				body.add_child(cs)
+				add_child(body)
+				body.position = data.position
+				var camera_body := StaticBody3D.new()
+				camera_body.collision_layer = 2
+				camera_body.collision_mask = 0
+				var camera_shape := CollisionShape3D.new()
+				var camera_volume := CylinderShape3D.new()
+				camera_volume.radius = 1.25
+				camera_volume.height = 11
+				camera_shape.shape = camera_volume
+				camera_shape.position.y = 5.5
+				camera_body.add_child(camera_shape)
+				add_child(camera_body)
+				camera_body.position = data.position
+				collision_trees[data.id] = [body,camera_body]
+		for id in collision_trees.keys():
+			if not wanted_bodies.has(id):
+				for body in collision_trees[id]: body.queue_free()
+				collision_trees.erase(id)
+
+func nearby_trees(pos: Vector3, radius: float = 2.5) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var first := chunk_key(pos-Vector3(radius,0,radius))
+	var last := chunk_key(pos+Vector3(radius,0,radius))
+	for x in range(first.x,last.x+1):
+		for z in range(first.y,last.y+1):
+			var key := Vector2i(x,z)
+			if chunks.has(key):
+				for id in chunks[key].ids:
+					if trees[id].position.distance_to(pos) <= radius:
+						result.append(trees[id])
+	return result
+
+func mark_tree(id: int) -> void:
+	var data := tree_data(id)
+	if data.is_empty(): return
+	marked_ids[id] = true
+	if trees.has(id):
+		trees[id].marked = true
+		build_mark(id,chunks[chunk_key(data.position)].node)
+
+func build_mark(id: int, parent: Node3D) -> void:
+	var data := tree_data(id)
+	var mark_name := "Mark_%d" % id
+	if parent.has_node(mark_name): return
+	var root := Node3D.new()
+	root.name = mark_name
+	parent.add_child(root)
+	root.position = data.position
+	for side in 4:
+		var holder := Node3D.new()
+		root.add_child(holder)
+		holder.rotation.y = side*PI/2
+		for angle in [-0.65,0.65]:
+			var cut := LineaArt.box(holder,Vector3(0.045,0.42,0.045),Vector3(0,1.28,0.37),mark_material)
+			cut.rotation.z = angle
 
 func build_doors() -> void:
 	var wood := LineaArt.material(Color("4c3931"))
@@ -330,36 +449,6 @@ func build_clearing() -> void:
 	var satchel := LineaArt.box(self,Vector3(0.6,0.25,0.45),Vector3(-1.8,0.15,-0.5),LineaArt.material(Color("66513d")))
 	satchel.rotation.y = -0.5
 	LineaArt.box(self,Vector3(0.58,0.04,0.035),Vector3(-1.8,0.28,-0.5),mark_material)
-
-func place_exit(angle: float) -> void:
-	if is_instance_valid(exit_node):
-		return
-	exit_position = Vector3(sin(angle)*EXIT_RADIUS,0,cos(angle)*EXIT_RADIUS)
-	exit_node = Node3D.new()
-	add_child(exit_node)
-	exit_node.position = exit_position
-	exit_node.rotation.y = angle
-	var mat := LineaArt.material(Color("485652"))
-	for x in [-1.5,1.5]:
-		var column := LineaArt.box(exit_node,Vector3(1.1,4.6,1.4),Vector3(x,2.3,0),mat)
-		column.rotation.z = -signf(x)*0.15
-	LineaArt.box(exit_node,Vector3(3.8,0.8,1.5),Vector3(0,4.2,0),mat)
-	var panel := MeshInstance3D.new()
-	var quad := QuadMesh.new()
-	quad.size = Vector2(1.9,3.8)
-	panel.mesh = quad
-	panel.position.y = 1.9
-	var glow := ShaderMaterial.new()
-	glow.shader = load("res://shaders/door.gdshader")
-	glow.set_shader_parameter("tint",Color("c0b992"))
-	panel.material_override = glow
-	exit_node.add_child(panel)
-	var light := OmniLight3D.new()
-	light.position.y = 2
-	light.light_color = Color("d9d3a6")
-	light.light_energy = 1.6
-	light.omni_range = 8
-	exit_node.add_child(light)
 
 func apply_quality() -> void:
 	sun.shadow_enabled = int(State.settings.quality) > 0

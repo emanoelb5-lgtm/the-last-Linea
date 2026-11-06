@@ -14,16 +14,16 @@ func _ready() -> void:
 	add_child(game)
 	await get_tree().create_timer(0.6).timeout
 	game.set_process(false)
-	game.camera.position = Vector3(8,4.8,10)
+	game.camera.position = Vector3(5,1.9,5)
 	game.camera.look_at(Vector3(0,0.8,0))
 	await capture("01-menu")
 	game.start_game(true)
-	game.process_intro(6.5)
+	game.process_intro(6.8)
 	await capture("02-abertura")
 	game.finish_intro()
 	game.player.position = Vector3(1.4,0,-0.7)
-	game.camera_target = game.player.position+Vector3(0,1.15,0)
-	game.camera.position = game.player.position+Vector3(0,5.5,8)
+	game.camera_target = game.player.position+Vector3(0,1.28,0)
+	game.camera.position = game.player.position+Vector3(0,1.96,5.7)
 	game.update_camera(1.0)
 	game.update_interaction()
 	game.toast_time = 0
@@ -37,7 +37,8 @@ func _ready() -> void:
 	game.update_interaction()
 	await capture("07-marca")
 	game.player.position = game.forest.door_positions[0]+Vector3(0,0,4)
-	game.camera.position = game.player.position+Vector3(6,4.8,7)
+	game.forest.update_streaming(game.player.position,true)
+	game.camera.position = game.player.position+Vector3(3,1.9,5)
 	game.camera.look_at(game.forest.door_positions[0]+Vector3(0,1.3,0))
 	game.update_interaction()
 	await capture("04-porta")
@@ -48,6 +49,7 @@ func _ready() -> void:
 	game.hud.visible = false
 	game.forest.focus_marker.visible = false
 	game.player.position = Vector3.ZERO
+	game.forest.update_streaming(game.player.position,true)
 	game.player.stand_pose()
 	game.player.model.rotation.y = 0
 	game.player.enabled = false

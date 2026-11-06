@@ -1,6 +1,6 @@
 # The Last Linea
 
-**Um homem sem memória. Uma floresta que devolve seus passos. Uma montanha no fim de qualquer caminho.**
+**Um jovem sem memória. Uma floresta que devolve seus passos. Uma montanha no fim de qualquer caminho.**
 
 RPG narrativo em capítulos para Android, com mundo 3D, resolução pixelada e interface em português.
 Criação: **Emanuel Bonfim / B5 Soluções**.
@@ -9,19 +9,19 @@ Criação: **Emanuel Bonfim / B5 Soluções**.
 
 ![Personagem humano do capítulo I, renderizado no jogo](docs/screenshots/08-personagem-humano.webp)
 
-[Ver no Android](docs/screenshots/09-android.webp) · [Ver a pausa no Android](docs/screenshots/10-android-pausa.webp) · [Ver a abertura](docs/screenshots/02-abertura.webp) · [Ver a exploração](docs/screenshots/03-exploracao.webp) · [Ver a animação de corte](docs/screenshots/06-riscando.webp) · [Ver a marca concluída](docs/screenshots/07-marca.webp)
+[Ver no Android](docs/screenshots/09-android.webp) · [Ver a pausa no Android](docs/screenshots/10-android-pausa.webp) · [Ver o despertar](docs/screenshots/14-ajoelhado.webp) · [Ver a pergunta](docs/screenshots/16-onde-estou.webp) · [Ver a exploração](docs/screenshots/03-exploracao.webp) · [Ver a animação de corte](docs/screenshots/06-riscando.webp) · [Ver a marca concluída](docs/screenshots/07-marca.webp)
 
 ## Capítulo I — A floresta que devolve
 
-**Versão 0.3 — O viajante:** modelo humano com rosto, mãos e membros articulados; silhueta anatômica com renderização pixelada. A abertura usa áudio preparado previamente e uma superfície 3D com tamanho válido. A publicação passa a exigir abertura e entrada no capítulo em Android. [Notas desta versão](docs/RELEASE_NOTES.md).
+**Versão 0.4 — Onde eu estou?:** protagonista jovem, despertar com apoios das mãos e dos pés, câmera baixa e floresta com cerca de 1,5 km de diâmetro. Os perigos só aparecem depois de uma caminhada longa. O capítulo termina automaticamente ao chegar ao pé da montanha. [Notas desta versão](docs/RELEASE_NOTES.md).
 
-- Abertura com câmera animada: árvores secas, névoa e um homem desacordado que desperta.
-- Pequeno mundo aberto com 240 árvores marcáveis, pedras de memória, clareira de descanso e montanhas em todo o perímetro.
+- Abertura com câmera animada: árvores secas, névoa e um jovem desacordado que se apoia, senta, ajoelha e se levanta antes de perguntar onde está.
+- Mundo aberto com aproximadamente 760 m entre a clareira e a montanha: cerca de 1,5 km de diâmetro e 1,8 km² de floresta. As regiões são carregadas durante a caminhada; as 240 árvores originais preservam seus lugares e marcas.
 - Riscos nas árvores persistem entre retornos, mortes e sessões. Cada árvore concede XP apenas uma vez.
-- Quatro portas isoladas fazem o personagem voltar à clareira ao cruzar seus vãos; pistas e experiência permanecem.
-- Quatorze armadilhas sinalizadas por placas de metal. É possível evitá-las, esquivar ou desarmá-las pela borda.
+- Quatro portas, todas a mais de 410 m do início, fazem o personagem voltar à clareira ao cruzar seus vãos; pistas e experiência permanecem.
+- Quatorze armadilhas, todas a mais de 260 m do início, sinalizadas por placas de metal. É possível evitá-las, esquivar ou desarmá-las pela borda.
 - Vida, experiência, níveis e recuperação de vida ao subir de nível. **Sem barra de fome.**
-- A montanha é descoberta em qualquer direção. Uma fenda aparece no trecho encontrado e encerra o capítulo com um gancho para a continuação.
+- A montanha é alcançável em qualquer direção. Chegar ao seu pé encerra o capítulo automaticamente, sem exigir uma passagem, memórias ou XP.
 - Três memórias opcionais e caderno para reler as descobertas.
 - Salvamento local automático e configurações de áudio, câmera, tamanho do joystick, qualidade visual, 30/60 FPS e contador de FPS.
 
@@ -42,7 +42,7 @@ Instale o APK da release. O Android pede autorização para instalar de uma font
 
 ## Engine e direção visual
 
-Godot **4.6.3**, GDScript e renderer **Compatibility**. Cenário, personagens, colisões e câmera são 3D reais, renderizados em 180p, 270p ou 360p e ampliados por vizinho mais próximo; interface em resolução independente. Há quantização de cor e dithering leve. Árvores e vegetação usam MultiMesh, névoa de profundidade e planos leves de bruma. Sem névoa volumétrica dependente de Vulkan. Modelos, shaders e áudio sintetizado são originais do projeto. O viajante usa malhas anatômicas afuniladas; o efeito pixel art vem da renderização e dos materiais. Os sons são preparados uma vez com `tools/render_audio.py` e distribuídos como Ogg, sem síntese PCM durante a abertura no celular.
+Godot **4.6.3**, GDScript e renderer **Compatibility**. Cenário, personagens, colisões e câmera são 3D reais, renderizados em 180p, 270p ou 360p e ampliados por vizinho mais próximo; interface em resolução independente. Há quantização de cor e dithering leve. Árvores e vegetação usam MultiMesh, névoa de profundidade e planos leves de bruma. A floresta mantém até 25 regiões visuais em torno do jogador; colisões ficam nas proximidades e árvores distantes usam malhas simplificadas. Sem névoa volumétrica dependente de Vulkan. Modelos, shaders e áudio sintetizado são originais do projeto. O viajante usa malhas anatômicas afuniladas; o efeito pixel art vem da renderização e dos materiais. Os sons são preparados uma vez com `tools/render_audio.py` e distribuídos como Ogg, sem síntese PCM durante a abertura no celular.
 
 ## Desenvolvimento e Actions
 
@@ -69,4 +69,4 @@ O pacote **`online.b5solucoes.thelastlinea.preview`** é exclusivamente de teste
 
 ## Próximos capítulos
 
-A primeira versão estabelece exploração, progressão, persistência e distribuição. O próximo capítulo pode acrescentar o outro lado da fenda, novos personagens, diálogos e combate. Veja [docs/CHAPTERS.md](docs/CHAPTERS.md) para a continuidade e os pontos de extensão.
+A primeira versão estabelece exploração, progressão, persistência e distribuição. O próximo capítulo pode começar pela trilha da montanha, com novos personagens, diálogos e combate. Veja [docs/CHAPTERS.md](docs/CHAPTERS.md) para a continuidade e os pontos de extensão.

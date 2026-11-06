@@ -3,7 +3,7 @@ const ECHO_TITLES := ["I · A primeira marca", "II · O caminho de volta", "III 
 const ECHO_TEXTS := [
 	"Alguém riscou estas palavras na pedra: ‘Não confie no caminho. Confie no que você deixa nele.’ Abaixo, três marcas iguais às que sua mão parece lembrar. Você não sabe seu nome, mas sabe segurar a lâmina.",
 	"‘Atravessei a porta para sair. Acordei onde havia começado. As árvores ainda tinham minhas marcas.’ A letra é sua. Você tem certeza disso. A floresta devolve seus passos, mas não consegue apagar tudo.",
-	"‘A montanha não fica ao norte. Nem ao sul. Ela fica no fim de qualquer caminho.’ A última frase foi interrompida: ‘Se ainda houver uma linha, siga...’ Do outro lado da névoa, alguma coisa responde."
+	"‘A montanha não fica ao norte. Nem ao sul. Ela fica no fim de qualquer caminho.’ A última frase foi interrompida: ‘Se ainda houver uma linha, siga...’ Você precisa chegar ao pé da montanha."
 ]
 const CREAM := Color("e4dfcc")
 const MUTED := Color("9cae9f")
@@ -42,12 +42,13 @@ var update_button: Button
 var mode := "menu"
 var return_mode := "menu"
 var cam_yaw := 0.0
-var cam_pitch := 0.52
+var cam_pitch := 0.12
 var camera_target := Vector3.ZERO
 var intro_clock := 0.0
 var intro_serial := 0
 var autosave_clock := 0.0
 var interaction: Dictionary = {}
+var mountain_contact_latched := false
 var booted := false
 var button_reports: Array[Dictionary] = []
 
@@ -120,7 +121,7 @@ func build_view() -> void:
 	camera = Camera3D.new()
 	camera.fov = 58
 	camera.near = 0.1
-	camera.far = 180
+	camera.far = 125
 	forest.add_child(camera)
 	camera.current = true
 	picture = TextureRect.new()
@@ -134,7 +135,7 @@ func build_view() -> void:
 	picture.material = grade
 	add_child(picture)
 	resize_view()
-	camera.position = Vector3(8,5,10)
+	camera.position = Vector3(5.5,1.9,5)
 	camera.look_at(Vector3(0,0.8,0))
 
 func resize_view() -> void:
@@ -442,7 +443,7 @@ func confirm_new() -> void:
 
 func begin_new() -> void:
 	State.new_game()
-	# Rebuild removes old marks, disarmed traps and the ending gate.
+	# Rebuild removes old marks and disarmed traps.
 	var old := forest
 	var new_forest := LineaForest.new()
 	old.remove_child(player)
@@ -459,9 +460,11 @@ func begin_new() -> void:
 func start_game(with_intro: bool) -> void:
 	clear_overlay()
 	cam_yaw = 0
-	cam_pitch = 0.52
-	player.position = State.last_position + Vector3(0,0.06,0)
-	camera_target = player.position + Vector3(0,1,0)
+	cam_pitch = 0.12
+	player.position = State.last_position+Vector3(0,0.02,0)
+	forest.update_streaming(player.position,true)
+	mountain_contact_latched = State.completed and Vector2(player.position.x,player.position.z).length() >= LineaForest.MOUNTAIN_RADIUS-15
+	camera_target = player.position+Vector3(0,1.28,0)
 	if with_intro:
 		set_mode("intro")
 		intro_clock = 0
@@ -470,6 +473,8 @@ func start_game(with_intro: bool) -> void:
 		print("LINEA_INTRO_READY")
 	else:
 		player.stand_pose()
+		camera.position = camera_target+Vector3(0,sin(cam_pitch)*5.7,cos(cam_pitch)*5.7)
+		camera.look_at(camera_target)
 		set_mode("play")
 		refresh_hud()
 		toast("Marque as árvores. Nem todo caminho é uma saída.",5)
@@ -479,11 +484,11 @@ func finish_intro() -> void:
 	if mode != "intro":
 		return
 	intro_serial += 1
-	player.stand_pose()
+	player.finish_wake()
 	State.intro_seen = true
-	State.save_game()
+	snapshot()
 	set_mode("play")
-	camera_target = player.position + Vector3.UP
+	camera_target = player.position+Vector3(0,1.28,0)
 	refresh_hud()
 	toast("Eu preciso me orientar. Posso riscar as árvores próximas.",5)
 	print("LINEA_PLAY_READY")
@@ -670,8 +675,8 @@ func refresh_hud() -> void:
 	health_bar.value = State.health
 	xp_bar.value = State.xp % 100
 	health_label.text = "VIDA  %d / 100" % State.health
-	level_label.text = "VIAJANTE · NÍVEL %d  /  XP %d / 100" % [State.level(),State.xp%100]
-	goal_label.text = "Investigue a fenda na montanha." if State.mountain_found else "Encontre o limite da floresta."
+	level_label.text = "JOVEM · NÍVEL %d  /  XP %d / 100" % [State.level(),State.xp%100]
+	goal_label.text = "Encontre um caminho pela floresta."
 	if State.completed:
 		goal_label.text = "Capítulo concluído · continue explorando."
 	guide_label.visible = bool(State.settings.hints) and State.marks.is_empty() and not State.mountain_found
@@ -693,7 +698,7 @@ func rotate_camera(delta: Vector2) -> void:
 	if mode != "play":
 		return
 	cam_yaw -= delta.x * 0.005 * float(State.settings.sensitivity)
-	cam_pitch = clampf(cam_pitch + delta.y * 0.003 * float(State.settings.sensitivity),0.2,0.95)
+	cam_pitch = clampf(cam_pitch+delta.y*0.003*float(State.settings.sensitivity),0.04,0.22)
 
 func _input(event: InputEvent) -> void:
 	if mode != "play" or not booted:
@@ -738,40 +743,62 @@ func _process(delta: float) -> void:
 	match mode:
 		"menu","about","confirm":
 			var t := Time.get_ticks_msec() * 0.00004
-			camera.position = Vector3(sin(t)*10,4.5,cos(t)*10)
+			camera.position = Vector3(sin(t)*7,1.9,cos(t)*7)
 			camera.look_at(Vector3(0,0.8,0))
 		"intro": process_intro(delta)
 		"play": process_game(delta)
 		"pause","settings","journal","note":
 			player.input_vector = Vector2.ZERO
 
+func cinematic_camera(desired: Vector3, target: Vector3) -> void:
+	var query := PhysicsRayQueryParameters3D.create(target,desired,3,[player.get_rid()])
+	var hit := forest.get_world_3d().direct_space_state.intersect_ray(query)
+	if not hit.is_empty() and hit.position.distance_to(target) > 0.8:
+		desired = hit.position+(target-hit.position).normalized()*0.25
+	camera.position = desired
+	camera.look_at(target)
+
 func process_intro(delta: float) -> void:
 	intro_clock += delta
 	var t := intro_clock
-	if t < 4.0:
-		camera.position = Vector3(0,lerpf(10,5.8,t/4),lerpf(12,7,t/4))
-		camera.look_at(Vector3(0,0.5,0))
-		caption.text = "Não há vento. Mesmo assim, as árvores sussurram."
+	player.wake_pose(t)
+	var desired: Vector3
+	var target: Vector3
+	if t < 3.4:
+		var p := smoothstep(0,3.4,t)
+		desired = Vector3(1.2,1.0,-5.8).lerp(Vector3(2.4,0.85,-3.0),p)
+		target = Vector3(0,0.30,0.20)
+		caption.text = "Entre as árvores secas, um jovem começa a despertar."
 	elif t < 8.0:
-		camera.position = Vector3(lerpf(0,1.4,(t-4)/4),2.5,lerpf(4.8,3.7,(t-4)/4))
-		camera.look_at(Vector3(0,0.6,0))
-		caption.text = "No chão frio, um homem respira.\nEle não se lembra de ter chegado."
-	elif t < 11.0:
-		var progress := smoothstep(8.0,11.0,t)
-		player.model.rotation.z = lerpf(PI/2,0,progress)
-		player.model.position = Vector3(lerpf(0.8,0,progress),lerpf(0.24,0,progress),0)
-		camera.position = Vector3(lerpf(1.4,0,(t-8)/3),lerpf(2.5,4,(t-8)/3),lerpf(3.7,6,(t-8)/3))
-		camera.look_at(Vector3(0,1,0))
-		caption.text = "‘Onde eu estou?’"
-	elif t < 14.5:
-		player.stand_pose()
-		camera.position = camera.position.lerp(Vector3(0,5.5,8),delta*1.5)
-		camera.look_at(Vector3(0,1,0))
-		caption.text = "A lâmina na sua cintura parece familiar.\nTalvez as marcas mostrem o caminho de volta."
+		var p := smoothstep(3.4,8.0,t)
+		desired = Vector3(2.4,0.85,-3.0).lerp(Vector3(2.4,1.30,-2.8),p)
+		target = Vector3(0,0.32,0).lerp(Vector3(0,0.85,0),p)
+		caption.text = "Ele apoia as mãos na terra.
+As pernas ainda tremem."
+	elif t < 10.8:
+		var p := smoothstep(8.0,10.8,t)
+		desired = Vector3(2.4,1.30,-2.8).lerp(Vector3(1.65,1.62,-2.8),p)
+		target = Vector3(0,0.85,0).lerp(Vector3(0,1.35,-0.26),p)
+		caption.text = "Com um joelho no chão, ele reúne forças para levantar."
+	elif t < 14.0:
+		desired = Vector3(1.65,1.62,-2.8)
+		target = Vector3(0,1.35,-0.26)
+		caption.text = "— Onde eu estou?"
+	elif t < 16.0:
+		var p := smoothstep(14,16,t)
+		var angle := lerpf(2.61,0,p)
+		var distance := lerpf(3.2,5.7,p)
+		target = Vector3(0,1.28,-0.26)
+		desired = target+Vector3(sin(angle)*distance,lerpf(0.34,sin(0.12)*5.7,p),cos(angle)*distance)
+		caption.text = "Preciso encontrar uma saída.
+Posso marcar as árvores para não me perder."
 	else:
 		finish_intro()
+		return
+	cinematic_camera(desired,target)
 
 func process_game(delta: float) -> void:
+	forest.update_streaming(player.position)
 	var keyboard := Input.get_vector("left","right","forward","back")
 	var pad := Vector2.ZERO
 	if not Input.get_connected_joypads().is_empty():
@@ -793,29 +820,32 @@ func process_game(delta: float) -> void:
 	if mode != "play":
 		return
 	var distance := Vector2(player.position.x,player.position.z).length()
-	if distance >= LineaForest.MOUNTAIN_RADIUS and not State.mountain_found:
+	if distance < LineaForest.MOUNTAIN_RADIUS-15:
+		mountain_contact_latched = false
+	if distance >= LineaForest.MOUNTAIN_RADIUS and not mountain_contact_latched:
+		mountain_contact_latched = true
 		discover_mountain()
+		finish_chapter()
+		return
 	var heading := fposmod(cam_yaw,TAU)
 	var cardinals := ["NORTE","OESTE","SUL","LESTE"]
 	compass_label.text = "·  %s  ·" % cardinals[roundi(heading/(PI/2))%4]
-	if State.mountain_found:
-		compass_label.text += "   FENDA %dm" % roundi(player.position.distance_to(forest.exit_position))
 	autosave_clock += delta
 	if autosave_clock >= 8.0:
 		autosave_clock = 0
 		snapshot()
 
 func update_camera(delta: float) -> void:
-	var target := player.position + Vector3(0,1.15,0)
+	var target := player.position+Vector3(0,1.28,0)
 	camera_target = camera_target.lerp(target,1.0-exp(-delta*9))
-	var offset := Vector3(sin(cam_yaw)*cos(cam_pitch),sin(cam_pitch),cos(cam_yaw)*cos(cam_pitch))*8.8
+	var offset := Vector3(sin(cam_yaw)*cos(cam_pitch),sin(cam_pitch),cos(cam_yaw)*cos(cam_pitch))*5.7
 	var desired := camera_target + offset
 	var query := PhysicsRayQueryParameters3D.create(camera_target,desired,3,[player.get_rid()])
 	var hit := forest.get_world_3d().direct_space_state.intersect_ray(query)
 	if not hit.is_empty():
 		desired = hit.position + (camera_target-hit.position).normalized()*0.35
 	if desired.distance_to(camera_target) < 0.4:
-		desired = camera_target + Vector3(0,1.5,0.3)
+		desired = camera_target+Vector3(0,0.45,0.6)
 	var next_position := camera.position.lerp(desired,1.0-exp(-delta*12))
 	# Clipping only the desired endpoint is insufficient while orbiting: the
 	# smoothed camera can still pass through a trunk on its way there.
@@ -827,14 +857,13 @@ func update_camera(delta: float) -> void:
 	camera.look_at(camera_target)
 
 func discover_mountain() -> void:
+	if State.mountain_found: return
 	State.mountain_found = true
 	State.mountain_angle = atan2(player.position.x,player.position.z)
-	forest.place_exit(State.mountain_angle)
 	grant_xp(40)
 	snapshot()
 	refresh_hud()
 	Sound.play("echo")
-	toast("A montanha. Qualquer caminho terminava aqui.  +40 XP",6)
 
 func update_interaction() -> void:
 	action_bar.visible = player.busy()
@@ -847,9 +876,8 @@ func update_interaction() -> void:
 		return
 	interaction = {}
 	var pos := player.position
-	if State.mountain_found and pos.distance_to(forest.exit_position) < 3.2:
-		interaction = {"type":"exit","text":"Escutar a fenda na montanha"}
-	elif pos.length() < 2.7 and State.health < 100:
+	forest.update_streaming(pos)
+	if pos.length() < 2.7 and State.health < 100:
 		interaction = {"type":"rest","text":"Descansar na clareira · recuperar vida"}
 	else:
 		for i in forest.echo_positions.size():
@@ -864,7 +892,7 @@ func update_interaction() -> void:
 				break
 	if interaction.is_empty():
 		var nearest := 2.5
-		for tree in forest.trees:
+		for tree in forest.nearby_trees(pos):
 			var distance := pos.distance_to(tree.position)
 			if distance < nearest:
 				nearest = distance
@@ -872,7 +900,7 @@ func update_interaction() -> void:
 	context_label.text = interaction.get("text","")
 	interact_button.visible = not interaction.is_empty()
 	if not interaction.is_empty():
-		var texts := {"tree":"RISCAR ÁRVORE","echo":"LER MEMÓRIA","trap":"DESARMAR","rest":"DESCANSAR","exit":"INVESTIGAR"}
+		var texts := {"tree":"RISCAR ÁRVORE","echo":"LER MEMÓRIA","trap":"DESARMAR","rest":"DESCANSAR"}
 		interact_button.text = texts[interaction.type] + (" · E" if not OS.has_feature("android") else "")
 		interact_button.disabled = interaction.type == "tree" and forest.trees[interaction.id].marked
 	update_focus_marker()
@@ -889,7 +917,6 @@ func update_focus_marker() -> void:
 			marked = forest.trees[interaction.id].marked
 		"trap": target = forest.trap_positions[interaction.id]
 		"echo": target = forest.echo_positions[interaction.id]
-		"exit": target = forest.exit_position
 	forest.focus_at(target,interaction.type,marked)
 
 func interact() -> void:
@@ -918,14 +945,12 @@ func interact() -> void:
 			State.changed.emit()
 			Sound.play("echo")
 			toast("A clareira lhe devolve o fôlego. Vida recuperada.")
-		"exit":
-			finish_chapter()
 	snapshot()
 
 func finish_interaction(kind: String, id: int) -> void:
 	if mode != "play":
 		return
-	if kind == "tree" and id >= 0 and id < forest.trees.size():
+	if kind == "tree" and forest.trees.has(id):
 		var tree: Dictionary = forest.trees[id]
 		if State.marks.has(id) or player.position.distance_to(tree.position) > 1.8:
 			toast("Chegue um pouco mais perto para alcançar a casca.")
@@ -999,8 +1024,9 @@ func return_to_clearing(defeated: bool) -> void:
 		State.health = 100
 	for door in forest.doors:
 		door.set_meta("last_side",door.to_local(player.global_position).z)
-	camera_target = player.position + Vector3.UP
-	camera.position = player.position+Vector3(0,5.5,8)
+	camera_target = player.position+Vector3(0,1.28,0)
+	forest.update_streaming(player.position,true)
+	camera.position = player.position+Vector3(0,0.68,5.7)
 	snapshot()
 	refresh_hud()
 	await fade_to(0.0,0.6)
@@ -1008,6 +1034,7 @@ func return_to_clearing(defeated: bool) -> void:
 	toast("Você desperta outra vez. Suas marcas e memórias continuam aqui." if defeated else "A mesma clareira. As suas marcas ainda estão lá.",5)
 
 func finish_chapter() -> void:
+	if mode == "ending": return
 	set_mode("ending")
 	if not State.completed:
 		grant_xp(60)
@@ -1015,8 +1042,8 @@ func finish_chapter() -> void:
 	snapshot()
 	Sound.play("door")
 	await fade_to(1.0,1.1)
-	var box := shell("A última linha", "FIM DO CAPÍTULO I",680,555)
-	box.add_child(paragraph("Você encosta a mão na pedra.\nDo outro lado, uma voz diz seu nome.\n\nVocê não o reconhece.\nMas a sua mão risca uma última linha.",25))
+	var box := shell("Ao pé da montanha", "FIM DO CAPÍTULO I",680,555)
+	box.add_child(paragraph("As árvores finalmente dão lugar à pedra.\nO jovem para ao pé da montanha, sem fôlego.\n\n— Eu cheguei... mas onde fica este lugar?\n\nA névoa encobre o caminho adiante.",25))
 	box.add_child(paragraph("A história continua no próximo capítulo. Novos capítulos chegarão pelas atualizações do jogo.",18,MUTED))
 	box.add_child(label("%d memórias  ·  %d marcas  ·  %d XP" % [State.echoes.size(),State.marks.size(),State.xp],16,GREEN))
 	spacer(box)

@@ -1,16 +1,18 @@
-# The Last Linea 0.3.0 — O viajante
+# The Last Linea 0.4.0 — Onde eu estou?
 
-Revisão de inicialização e do personagem do capítulo I para Android 64 bits (Android 7+).
+Nova abertura e exploração ampliada do capítulo I.
 
-- Novo personagem com proporções humanas: cabeça oval, rosto, pescoço, tronco e cintura, mãos com polegares, pernas e botas arredondadas. Os volumes do corpo não usam blocos cúbicos.
-- Cotovelos e joelhos articulados para caminhar, despertar, riscar árvores e desarmar armadilhas. Casaco, lenço, bolsa, lanterna e lâmina acompanham o corpo.
-- Visual pixelado pela renderização em baixa resolução e pelos materiais, preservando a silhueta humana.
-- Áudio original pré-processado em Ogg: a abertura deixa de sintetizar centenas de milhares de amostras PCM no celular. O ambiente começa depois do primeiro quadro renderizado.
-- A superfície 3D recebe uma resolução válida antes de entrar na cena, inclusive enquanto o Android ainda informa dimensões nulas. Faixas de resolução e qualidade são limitadas.
-- Correção do cálculo da vinheta para evitar comportamento indefinido entre drivers gráficos.
-- Recuperação da superfície OpenGL ao voltar do segundo plano, preservando o contexto gráfico, as texturas e o cenário. O teste também verifica se a imagem reaparece e se é possível voltar à exploração.
-- O Actions passa a instalar e abrir o APK ARM64 em Android 15 antes da publicação, cobrindo menu, abertura do capítulo, toque e retorno do segundo plano. Logs e capturas acompanham os artefatos.
+- Protagonista jovem, com rosto sem barba, cabelo com mechas, corpo mais leve e proporções humanas. O visual continua 3D e pixel art.
+- Despertar em etapas: respirar e se apoiar, sentar, firmar um joelho, empurrar o corpo, recuperar o equilíbrio e pegar a lanterna. Mãos, joelhos e pés usam apoios calculados; o corpo deixa de simplesmente girar para ficar em pé.
+- O jovem olha ao redor e pergunta: **“Onde eu estou?”** A fala aparece na legenda, com movimento do rosto.
+- Câmera próxima à altura do personagem, com limite de inclinação para manter a visão por dentro da floresta.
+- Mundo com cerca de **1,5 km de diâmetro**. As montanhas ficam a aproximadamente **760 metros** do despertar em qualquer direção.
+- Início tranquilo: nenhuma armadilha a menos de **260 metros**, nenhuma porta a menos de **410 metros**. Marcas, pistas e exploração ganham espaço antes dos perigos.
+- Regiões da floresta carregadas conforme a caminhada, com árvores distantes simplificadas e colisões apenas nas proximidades.
+- O capítulo termina **automaticamente ao chegar ao pé da montanha**. Não é preciso achar uma fenda, atravessar outra passagem nem cumprir uma quantidade de XP ou memórias.
 
-Vida, XP, marcas, memórias, armadilhas e progresso do capítulo continuam no mesmo formato de salvamento. A assinatura e a identificação do aplicativo permanecem compatíveis com as versões anteriores desta prévia.
+As marcas das 240 árvores originais conservam suas posições e os salvamentos anteriores continuam compatíveis. Vida, XP, memórias e armadilhas desarmadas são mantidos ao instalar a atualização por cima da prévia anterior.
 
-Baixe **TheLastLinea.apk** e instale por cima da versão anterior. Também é possível buscar a atualização nas configurações do jogo. Esta é uma versão de teste; o capítulo II ainda não está incluído.
+Para assistir à nova abertura e começar o percurso completo, escolha **Novo capítulo** no menu; o próprio jogo confirma o reinício do progresso. **Continuar** mantém o salvamento existente.
+
+APK Android ARM64, com a mesma assinatura de teste e o atualizador pelo GitHub. O capítulo II ainda não está incluído.

@@ -30,8 +30,26 @@ func _ready() -> void:
 		audio_valid = audio_valid and stream is AudioStreamOggVorbis and stream.get_length() > 0.1
 	verify(audio_valid and Sound.wind.stream.loop and Sound.drone.stream.loop,"all original sounds load from imported Ogg assets with ambient loops")
 	game.start_game(true)
+	game.player.wake_pose(5.0)
+	var seated_height: float = game.player.head.global_position.y
+	game.player.wake_pose(6.8)
+	var planted_foot: Vector3 = game.player.feet[0].global_position
+	verify(game.player.joints[1].global_position.y > 0.02 and game.player.joints[1].global_position.y < 0.18,"one knee supports the body near the ground during the rise")
+	game.player.wake_pose(9.2)
+	verify(game.player.feet[0].global_position.distance_to(planted_foot) < 0.02,"supporting foot remains planted while the pelvis rises")
+	game.player.wake_pose(11.8)
+	verify(seated_height < 1.1 and game.player.head.global_position.y > 1.5,"the spine and pelvis pass from sitting to a full human standing height")
+	var continuous := true
+	game.player.wake_pose(0)
+	var previous_head: Vector3 = game.player.head.global_position
+	for frame in 321:
+		game.player.wake_pose(frame*0.05)
+		var current_head: Vector3 = game.player.head.global_position
+		continuous = continuous and current_head.is_finite() and current_head.distance_to(previous_head) < 0.16
+		previous_head = current_head
+	verify(continuous,"waking poses interpolate continuously without a whole-body flip or nonfinite transforms")
 	game.process_intro(9.5)
-	verify(game.mode == "intro" and game.player.model.rotation.z < PI/2,"cutscene moves the camera and wakes the fallen man")
+	verify(game.mode == "intro" and game.player.wake_phase == "rising","cutscene wakes the young man with a supported rise")
 	var sight := PhysicsRayQueryParameters3D.create(game.camera.position,Vector3(0,0.8,0),1,[game.player.get_rid()])
 	verify(game.forest.get_world_3d().direct_space_state.intersect_ray(sight).is_empty(),"waking cutscene keeps the man visible between the trees")
 	game.finish_intro()
@@ -44,7 +62,16 @@ func _ready() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	verify(game.mode == "play","Android back resumes without mutating children inside notification propagation")
-	verify(game.forest.trees.size() == 240,"deterministic forest has all 240 markable trees")
+	verify(game.forest.legacy_positions.size() == 240 and game.forest.chunks.size() == 25,"large forest streams 25 regions while preserving the original 240 tree positions")
+	verify(LineaForest.MOUNTAIN_RADIUS >= 750 and State.MAP_LIMIT > LineaForest.MOUNTAIN_RADIUS,"mountain foot is more than 750 metres from the awakening")
+	var safe := true
+	for pos in game.forest.trap_positions: safe = safe and pos.length() >= 260
+	for pos in game.forest.door_positions: safe = safe and pos.length() >= 410
+	verify(safe,"no trap is within 260 metres and no door is within 410 metres of the start")
+	verify(game.camera.position.y < 3.0,"cinematic camera stays below the treetops")
+	game.rotate_camera(Vector2(0,9999))
+	verify(game.cam_pitch <= 0.22,"looking around cannot raise the camera above the forest")
+	game.cam_pitch = 0.12
 	verify(game.forest.doors.size() == 4 and game.forest.traps.size() == 14,"doors and hazards are present")
 	verify(game.forest.echo_positions.size() == 3,"three optional story memories")
 	var contact := InputEventScreenTouch.new()
@@ -82,7 +109,7 @@ func _ready() -> void:
 	await get_tree().create_timer(0.7).timeout
 	Input.action_release("forward")
 	verify(game.player.position.z < -1.2,"WASD moves the physical player across the ground")
-	game.player.position = game.forest.trees[0].position+Vector3(0,0,1.6)
+	game.player.position = game.forest.tree_data(0).position+Vector3(0,0,1.6)
 	game.update_interaction()
 	verify(game.interaction.get("type") == "tree","nearby trees can be selected")
 	verify(game.forest.focus_marker.visible,"selected interaction has a visible world marker")
@@ -107,7 +134,7 @@ func _ready() -> void:
 	verify(game.player.busy() and not State.disarmed.has(0),"disarming takes time and leaves the trap active until completed")
 	await get_tree().create_timer(1.2).timeout
 	verify(State.disarmed.has(0) and game.forest.traps[0].disarmed,"trap can be disarmed from its safe edge")
-	game.player.position = game.forest.trees[1].position+Vector3(0,0,1.7)
+	game.player.position = game.forest.tree_data(1).position+Vector3(0,0,1.7)
 	game.update_interaction()
 	game.interact()
 	game.damage(1)
@@ -137,20 +164,28 @@ func _ready() -> void:
 	await get_tree().create_timer(1.3).timeout
 	verify(game.mode == "play" and game.player.position.length() < 1.0,"door returns to the original clearing")
 	verify(State.health == 72 and State.marks.has(0) and State.echoes.has(0),"door preserves health, marks and discoveries")
-	# Check the core story promise in eight directions around the entire map.
+	# The chapter ends on contact with the mountain base in every direction.
+	var before_foot: int = State.xp
+	game.player.position = Vector3(0,0,-(LineaForest.MOUNTAIN_RADIUS-5))
+	game.process_game(0)
+	verify(game.mode == "play" and not State.completed,"walking near the mountain does not finish before reaching its foot")
+	var streaming_peak: int = game.forest.trees.size()
 	for i in 8:
-		if is_instance_valid(game.forest.exit_node):
-			game.forest.exit_node.free()
-			game.forest.exit_node = null
-		State.mountain_found = false
+		game.set_mode("play")
+		game.mountain_contact_latched = false
 		var a := i*TAU/8
 		var direction := Vector3(sin(a),0,cos(a))
-		game.player.position = direction*59
+		game.player.position = direction*(LineaForest.MOUNTAIN_RADIUS+0.2)
 		game.process_game(0)
-		verify(State.mountain_found and game.forest.exit_position.normalized().dot(direction) > 0.99,"mountain and chapter exit can be discovered in direction %d" % i)
-	var before_xp: int = State.xp
-	game.process_game(0)
-	verify(State.xp == before_xp,"mountain discovery awards XP once")
+		verify(State.mountain_found and State.completed and game.mode == "ending","reaching the mountain foot automatically ends the chapter in direction %d" % i)
+		streaming_peak = maxi(streaming_peak,game.forest.trees.size())
+		await get_tree().create_timer(1.9).timeout
+	verify(State.xp == before_foot+100,"mountain discovery and first ending grant their rewards only once")
+	verify(game.forest.chunks.size() == 25 and streaming_peak < 1400,"walking across the large world keeps a bounded number of tree instances loaded")
+	game.resume_game()
+	game.player.position = Vector3.ZERO
+	game.forest.update_streaming(Vector3.ZERO,true)
+	verify(game.forest.trees[0].marked,"tree marks survive unloading and returning to the original region")
 	game.player.position = Vector3.ZERO
 	game.update_interaction()
 	game.interact()
@@ -171,19 +206,19 @@ func _ready() -> void:
 	State.echoes.clear()
 	State.load_game()
 	verify(State.marks == before_save.marks and State.echoes == before_save.echoes and State.xp == before_save.xp,"save/load roundtrip restores gameplay progress")
-	game.player.position = game.forest.exit_position+Vector3(0,0,1)
+	game.player.position = Vector3(0,0,-LineaForest.MOUNTAIN_RADIUS)
 	var before_ending: int = State.xp
 	await game.finish_chapter()
-	verify(State.completed and State.xp == before_ending+60,"chapter ending is reachable and grants its first-completion reward")
+	verify(State.completed and State.xp == before_ending,"completed chapter can be viewed again without another reward")
 	game.resume_game()
 	await game.finish_chapter()
-	verify(State.xp == before_ending+60,"replaying the ending does not farm XP")
+	verify(State.xp == before_ending,"replaying the ending does not farm XP")
 	game.resume_game()
 	game.show_settings("pause")
 	verify(is_instance_valid(game.update_button),"settings exposes the GitHub updater")
 	game.settings_back()
 	verify(game.mode == "pause","settings returns to pause without restarting the chapter")
-	State.apply_data({"health":-3,"xp":-50,"marks":[0,0,-1,999,"bad"],"position":[10000,0,0]})
+	State.apply_data({"health":-3,"xp":-50,"marks":[0,0,-1,LineaWorldRules.MAX_TREE_ID+1,"bad"],"position":[10000,0,0]})
 	verify(State.health == 1 and State.xp == 0 and State.marks == [0] and State.last_position == Vector3.ZERO,"malformed save values are bounded and deduplicated")
 	State.apply_data({"schema":1,"health":64,"xp":135,"marks":[0,12],"echoes":[2],"disarmed":[0],"mountain_found":true,"mountain_angle":1.2,"intro_seen":true,"completed":false,"position":[2,0,-3]})
 	verify(State.health == 64 and State.xp == 135 and State.marks == [0,12] and State.echoes == [2] and State.disarmed == [0] and State.mountain_found and State.intro_seen and State.last_position == Vector3(2,0,-3),"version 0.1 progress remains compatible with the new interactions")

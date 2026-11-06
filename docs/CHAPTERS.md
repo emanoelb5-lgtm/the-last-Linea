@@ -1,40 +1,21 @@
-# Continuidade de The Last Linea
+# História e continuidade
 
 ## Capítulo I — A floresta que devolve
 
-O jogador conhece um homem adulto, ainda sem nome, que desperta com uma lâmina e uma lanterna. A floresta morta guarda inscrições escritas pela própria mão dele. Portas devolvem seu corpo à clareira; árvores riscadas e lembranças sobrevivem. A montanha forma um cerco físico e narrativo. Ao tocar a fenda, uma voz o chama por um nome que ele não reconhece.
+Um jovem sem nome desperta entre árvores secas e névoa. Ele se apoia no chão, senta, passa por uma posição de joelho e se levanta com dificuldade. Olha ao redor: “Onde eu estou?”. Uma lanterna e uma lâmina são os únicos objetos familiares.
 
-### Regras de continuidade
+A clareira inicial é segura. O jogador percorre uma floresta ampla, pode riscar árvores e ler três memórias opcionais. Só depois de uma caminhada longa encontra placas de espinhos e portas que devolvem seu corpo à clareira. Marcas, experiência e lembranças sobrevivem a esses retornos.
 
-- O homem não recebe um nome definitivo neste capítulo.
-- O motivo dos retornos permanece um mistério.
-- Portas não apagam XP, marcas, armadilhas desarmadas nem memórias.
-- Não há fome, coleta obrigatória de alimento ou crafting nesta versão.
-- As três memórias são opcionais; o capítulo pode ser concluído sem elas.
-- A fenda surge no trecho da montanha que o jogador encontra primeiro e conserva essa posição no salvamento.
-- Concluir o capítulo concede XP uma vez e permite continuar explorando.
+A montanha cerca o mundo. Qualquer direção conduz à sua base. **Chegar ao pé da montanha encerra o capítulo automaticamente**, sem fenda obrigatória nem requisito de XP, marcas ou memórias. O jovem para diante da pedra e continua sem saber onde está. A subida fica para a continuação.
 
-## Possível Capítulo II — A voz do outro lado
+## Pontos de continuidade
 
-Gancho ainda aberto para decisão criativa: a passagem leva a uma estação abandonada dentro da montanha. Uma pessoa conhece o viajante, mas reage como se ele já tivesse vindo muitas vezes. O jogador começa a confrontar a diferença entre lembrar e reconhecer.
+- Vida, XP, marcas, memórias, armadilhas e conclusão ficam no salvamento de esquema 1.
+- A descoberta conserva o ângulo em que o jogador chegou à montanha.
+- As 240 árvores da floresta original mantêm posições e identificadores; as demais usam identificadores estáveis por célula do mundo.
+- Regiões visuais e colisões próximas são carregadas e descartadas durante a caminhada; as marcas são reconstruídas ao voltar.
+- Recompensas de descoberta e conclusão só são concedidas uma vez. Memórias e marcações são opcionais.
 
-Não está implementado. O capítulo seguinte será desenvolvido separadamente com Emanuel.
+## Próximo capítulo
 
-## Arquitetura para continuar
-
-| Arquivo | Responsabilidade |
-|---|---|
-| `scripts/game.gd` | Fluxo narrativo, câmeras, menus, HUD e regras de interação do capítulo I |
-| `scripts/forest.gd` | Mundo determinístico, árvores, montanhas, portas, pedras e armadilhas |
-| `scripts/player.gd` | Movimento, colisão, animação e esquiva |
-| `scripts/state.gd` | Salvamento versionado, estatísticas e configurações |
-| `scripts/updater.gd` | Consulta de releases, download e verificação do APK |
-| `native-updater/` | FileProvider e encaminhamento ao instalador do Android |
-| `scripts/art.gd` | Malhas e materiais originais |
-| `scripts/sound.gd` | Ambiência e efeitos sintetizados |
-
-Ao adicionar um capítulo, extrair o fluxo de `game.gd` para cenas de capítulo independentes e migrar o salvamento por versão de esquema, conservando os dados anteriores. Não basta substituir o arquivo de save por um formato incompatível.
-
-## Verificação física a fazer no Android
-
-Os testes automatizados não substituem uma sessão no telefone. Medir FPS, temperatura e consumo no Galaxy A56; conferir câmera e movimento simultâneos com dois dedos; colocar o app em segundo plano e retomar; atualizar a versão N para N+1 sem desinstalar e confirmar que marcas/XP continuam; testar internet interrompida e permissão de instalação recusada. Ajustar renderização e alcance de sombras com essas medidas.
+A continuação pode partir da base da montanha, explorar a trilha de subida e explicar parte da origem das inscrições. O ponto de partida não depende de atravessar uma fenda no capítulo I. Novos capítulos serão distribuídos pelo mesmo sistema de releases e atualizações.
